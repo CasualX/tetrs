@@ -1,8 +1,8 @@
-extern crate tetrs;
+extern crate tetrs_core as tetrs;
 extern crate rand;
-use rand::Rng;
 
-use ::std::io::prelude::*;
+use rand::Rng;
+use std::io::prelude::*;
 
 // FIXME! Little hack to clear the screen :)
 extern "C" { fn system(s: *const u8); }

@@ -1,22 +1,2 @@
-[package]
-name = "tetrs"
-version = "0.1.0"
-authors = ["Casper <CasualX@GitHub.com>"]
-
-description = "Tetris game engine."
-
-documentation = "https://docs.rs/tetrs/"
-repository = "https://github.com/CasualX/tetrs"
-
-readme = "readme.md"
-
-keywords = ["tetris"]
-
-license = "MIT"
-
-[[bin]]
-name = "tetrs"
-doc = false
-
-[dependencies]
-rand = "0.3"
+[workspace]
+members = ["core", "game"]

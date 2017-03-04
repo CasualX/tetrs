@@ -1,0 +1,9 @@
+[package]
+name = "tetrs-sdl"
+version = "0.1.0"
+
+build = "build.rs"
+
+[dependencies]
+tetrs-core = { path = "../core" }
+sdl2 = "0.29"

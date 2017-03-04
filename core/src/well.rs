@@ -2,10 +2,10 @@
 Playing field.
 */
 
-use ::std::{fmt};
+use ::std::{fmt, ops};
 use ::std::str::{FromStr};
 
-use ::Player;
+use ::{Player, Point};
 
 pub const MAX_HEIGHT: usize = 22;
 pub const MAX_WIDTH: usize = 16;
@@ -49,8 +49,12 @@ impl Well {
 	pub fn height(&self) -> i32 {
 		self.height as i32
 	}
+	/// Returns the field as lines.
 	pub fn lines(&self) -> &[Line] {
 		&self.field[..self.height as usize]
+	}
+	pub fn lines_mut(&mut self) -> &mut [Line] {
+		&mut self.field[..self.height as usize]
 	}
 	/// Hit tests the player against the field.
 	///
@@ -158,6 +162,35 @@ impl Well {
 		}
 		self.field[row as usize] = line;
 		old
+	}
+	/// Describes the field.
+	pub fn describe<F>(&self, mut f: F) where F: FnMut(Point) {
+		let height = self.height();
+		let width = self.width();
+		let _ = self.field[..height as usize];
+		for row in 0..height {
+			let mut line = self.field[row as usize];
+			for col in 0..width {
+				if line & 1 != 0 {
+					f(Point::new(col, row));
+				}
+				line >>= 1;
+			}
+		}
+	}
+}
+
+/// Set all the blocks in lhs that aren't set in rhs.
+impl ops::Sub for Well {
+	type Output = Well;
+	fn sub(self, rhs: Well) -> Well {
+		assert_eq!(self.width(), rhs.width());
+		assert_eq!(self.height(), rhs.height());
+		let mut result = Well::new(self.width(), self.height());
+		for (result, (&lhs, &rhs)) in Iterator::zip(result.lines_mut().iter_mut(), Iterator::zip(self.lines().iter(), rhs.lines().iter())) {
+			*result = lhs & !rhs;
+		}
+		result
 	}
 }
 
