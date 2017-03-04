@@ -31,38 +31,57 @@ fn input() -> Input {
 	std::io::stdin().read_line(&mut action).unwrap();
 	match &*action.trim().to_uppercase() {
 		"" => Input::None,
-		"L" | "LEFT" => Input::Left,
-		"R" | "RIGHT" => Input::Right,
+		"A" | "Q" | "LEFT" => Input::Left,
+		"D" | "RIGHT" => Input::Right,
 		"CW" | "RR" | "ROT" => Input::RotateCW,
 		"CCW" | "RL" => Input::RotateCCW,
-		"D" | "DOWN" | "SOFT" | "SOFT DROP" => Input::SoftDrop,
-		"DROP" | "HARD DROP" => Input::HardDrop,
+		"S" | "DOWN" | "SOFT" | "SOFT DROP" => Input::SoftDrop,
+		"W" | "Z" | "DROP" | "HARD DROP" => Input::HardDrop,
 		"G" | "GRAVITY" => Input::Gravity,
-		"Q" | "QUIT" | "QUTI" => Input::Quit,
+		"QUIT" | "QUTI" => Input::Quit,
 		"H" | "HELP" => Input::Help,
 		_ => Input::Invalid,
 	}
 }
 
-fn bot(bot: &tetrs::PlayerBot, state: &mut tetrs::State) -> bool {
-	bot.play(state);
-	true
+fn bot(state: &mut tetrs::State) -> bool {
+	let weights = tetrs::PlayW::new();
+	let bot = tetrs::PlayI::brute_force(&weights, state.well(), state.player().unwrap().piece);
+	loop {
+		let success = match bot.play(state) {
+			tetrs::PlayM::Idle => return true,
+			tetrs::PlayM::MoveLeft => state.move_left(),
+			tetrs::PlayM::MoveRight => state.move_right(),
+			tetrs::PlayM::RotateCW => state.rotate_cw(),
+			tetrs::PlayM::RotateCCW => state.rotate_ccw(),
+			tetrs::PlayM::SoftDrop => state.soft_drop(),
+			tetrs::PlayM::HardDrop => state.hard_drop(),
+		};
+		if !success {
+			return false;
+		}
+	}
 }
 
 fn main() {
 	clear_screen();
 
-	let mut state = tetrs::State::new(10, 12);
+	let mut state = tetrs::State::new(10, 22);
 	let mut next_piece = tetrs::Piece::J;
 	state.spawn(tetrs::Piece::I);
-	let player_bot = tetrs::PlayerBot::new();
 	let mut rng = rand::thread_rng();
 
 	loop {
 		println!("{}", state);
 
+		// Check for pieces in the spawning area
+		if state.is_game_over() {
+			println!("Game Over!");
+			break;
+		}
+
 		match input() {
-			Input::None => bot(&player_bot, &mut state),
+			Input::None => bot(&mut state),
 			Input::Quit => break,
 			Input::Left => state.move_left(),
 			Input::Right => state.move_right(),
@@ -74,7 +93,7 @@ fn main() {
 			_ => true,
 		};
 
-		// Spawn a new piece as needed.
+		// Spawn a new piece as needed
 		if state.player().is_none() {
 			if state.spawn(next_piece) {
 				println!("Game Over!");

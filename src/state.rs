@@ -195,16 +195,14 @@ impl State {
 			rot: Rot::Zero,
 			pt: Point {
 				x: self.well.width() / 2 - 2,
-				y: self.well.height(),
+				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i32,
 			},
 		});
 		self.well.test(&self.player.unwrap())
 	}
-	/// It is game over when the well extends to the top 2 lines
+	/// It is game over when the well extends to the top 2 lines.
 	pub fn is_game_over(&self) -> bool {
-		let height = self.well.height() as usize;
-		let top_lines = &self.well.lines()[height - 2..height];
-		top_lines.iter().all(|&line| line == 0)
+		self.well.test_line(self.well.height() - 1) || self.well.test_line(self.well.height() - 2)
 	}
 }
 

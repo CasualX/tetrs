@@ -1,6 +1,6 @@
 
 mod bot;
-pub use self::bot::PlayerBot;
+pub use self::bot::{PlayW, PlayI, PlayM};
 
 mod pt;
 pub use self::pt::Point;

@@ -98,6 +98,10 @@ impl Well {
 		}
 		return false;
 	}
+	/// Tests if any block is set on this line.
+	pub fn test_line(&self, row: i32) -> bool {
+		self.field[row as usize] != 0
+	}
 	/// Etch the player into the field.
 	pub fn etch(&mut self, player: &Player) {
 		// Grab the mesh for this rotation
@@ -229,15 +233,22 @@ impl FromStr for Well {
 
 impl fmt::Display for Well {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		let mut bg = " ";
 		for &row in self.field[0..self.height() as usize].iter().rev() {
 			f.write_str("|")?;
 			let mut mask = 0x1;
 			for _ in 0..self.width() {
-				let graphic = if (row & mask) != 0 { "□" } else { "." };
+				let graphic = if (row & mask) != 0 { "□" } else { bg };
 				f.write_str(graphic)?;
 				mask <<= 1;
 			}
 			f.write_str("|\n")?;
+			if bg == " " {
+				bg = "_";
+			}
+			else if bg == "_" {
+				bg = ".";
+			}
 		}
 		f.write_str("+")?;
 		for _ in 0..self.width() {
