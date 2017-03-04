@@ -113,15 +113,16 @@ pub enum PlayM {
 }
 
 /// Player AI.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PlayI {
-	x_pos: i32,
+	x: i32,
 	rot: Rot,
+	score: f64,
 }
 
 impl PlayI {
-	/// Brute force the best move with the given weights.
-	pub fn brute_force(weights: &PlayW, well: &Well, piece: Piece) -> PlayI {
+	/// Brute force the best move with the given well and weights.
+	pub fn best(weights: &PlayW, well: &Well, piece: Piece) -> PlayI {
 		// Brute force a solution...
 		let mut best_x = 0;
 		let mut best_rot = Rot::Zero;
@@ -152,9 +153,23 @@ impl PlayI {
 			}
 		}
 		PlayI {
-			x_pos: best_x,
+			x: best_x,
 			rot: best_rot,
+			score: best_score,
 		}
+	}
+	/// Brute force the worst piece for the given well and weights.
+	pub fn worst(weights: &PlayW, well: &Well) -> Piece {
+		let pieces = [Piece::S, Piece::Z, Piece::O, Piece::I, Piece::L, Piece::J, Piece::T];
+		pieces[..].iter().fold((Piece::S, f64::INFINITY), |(bad_piece, bad_score), &piece| {
+			let PlayI { score, .. } = Self::best(weights, well, piece);
+			if score < bad_score {
+				(piece, score)
+			}
+			else {
+				(bad_piece, bad_score)
+			}
+		}).0
 	}
 	pub fn play(&self, state: &State) -> PlayM {
 		match state.player() {
@@ -162,10 +177,10 @@ impl PlayI {
 				if self.rot != player.rot {
 					PlayM::RotateCW
 				}
-				else if self.x_pos < player.pt.x {
+				else if self.x < player.pt.x {
 					PlayM::MoveLeft
 				}
-				else if self.x_pos > player.pt.x {
+				else if self.x > player.pt.x {
 					PlayM::MoveRight
 				}
 				else {

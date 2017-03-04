@@ -46,7 +46,7 @@ fn input() -> Input {
 
 fn bot(state: &mut tetrs::State) -> bool {
 	let weights = tetrs::PlayW::new();
-	let bot = tetrs::PlayI::brute_force(&weights, state.well(), state.player().unwrap().piece);
+	let bot = tetrs::PlayI::best(&weights, state.well(), state.player().unwrap().piece);
 	loop {
 		let success = match bot.play(state) {
 			tetrs::PlayM::Idle => return true,
@@ -58,17 +58,19 @@ fn bot(state: &mut tetrs::State) -> bool {
 			tetrs::PlayM::HardDrop => state.hard_drop(),
 		};
 		if !success {
-			return false;
+			return state.hard_drop();
 		}
 	}
 }
+
+const HATETRIS: bool = true;
 
 fn main() {
 	clear_screen();
 
 	let mut state = tetrs::State::new(10, 22);
-	let mut next_piece = tetrs::Piece::J;
-	state.spawn(tetrs::Piece::I);
+	let mut next_piece = if HATETRIS { tetrs::Piece::S } else { tetrs::Piece::L };
+	state.spawn(next_piece);
 	let mut rng = rand::thread_rng();
 
 	loop {
@@ -95,12 +97,17 @@ fn main() {
 
 		// Spawn a new piece as needed
 		if state.player().is_none() {
+			next_piece = if HATETRIS {
+				tetrs::PlayI::worst(&tetrs::PlayW::new(), state.well())
+			}
+			else {
+				let r: u8 = rng.gen();
+				unsafe { std::mem::transmute(r % 7) }
+			};
 			if state.spawn(next_piece) {
 				println!("Game Over!");
 				break;
 			}
-			let r: u8 = rng.gen();
-			next_piece = unsafe { std::mem::transmute(r % 7) };
 		}
 
 		state.clear_lines(|_| ());
