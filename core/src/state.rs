@@ -1,13 +1,14 @@
+/*!
+*/
 
-use ::std::fmt;
-
-use ::{Player, Well, Piece, Rot, Point};
+use ::{Player, Well, Piece, Rot, Point, Scene, TileTy};
 
 /// Game state of player and well.
 #[derive(Clone, Debug)]
 pub struct State {
 	player: Option<Player>,
 	well: Well,
+	scene: Scene,
 }
 
 impl State {
@@ -18,13 +19,16 @@ impl State {
 		State {
 			player: None,
 			well: Well::new(width, height),
+			scene: Scene::new(width, height),
 		}
 	}
 	/// Creates a new game state from existing well.
 	pub fn with_well(well: Well) -> State {
+		let scene = Scene::new(well.width(), well.height());
 		State {
 			player: None,
 			well: well,
+			scene: scene,
 		}
 	}
 	/// Returns the current player.
@@ -146,8 +150,8 @@ impl State {
 		loop {
 			let next = player.move_down();
 			if self.well.test(&next) {
-				self.well.etch(&player);
-				self.player = None;
+				self.player = Some(player);
+				self.lock();
 				return true;
 			}
 			player = next;
@@ -170,6 +174,7 @@ impl State {
 			if self.well.line(row) == line_mask {
 				f(row + lines_cleared);
 				self.well.remove_line(row);
+				self.scene.remove_line(row);
 				lines_cleared += 1;
 			}
 			else {
@@ -181,6 +186,7 @@ impl State {
 	pub fn lock(&mut self) {
 		if let Some(pl) = self.player {
 			self.well.etch(&pl);
+			self.scene.render(&pl, TileTy::Field);
 			self.player = None;
 		}
 	}
@@ -204,21 +210,22 @@ impl State {
 	pub fn is_game_over(&self) -> bool {
 		self.well.test_line(self.well.height() - 1) || self.well.test_line(self.well.height() - 2)
 	}
-}
-
-impl fmt::Display for State {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let mut well = self.well.clone();
-		if let Some(player) = self.player.as_ref() {
-			well.etch(player);
+	pub fn scene(&self) -> Scene {
+		let mut scene = self.scene.clone();
+		if let Some(player) = self.player() {
+			// Drop the player down to visualize its ghost
+			let mut ghost = *player;
+			loop {
+				let next = ghost.move_down();
+				if self.well.test(&next) {
+					scene.render(&ghost, TileTy::Ghost);
+					break;
+				}
+				ghost = next;
+			}
+			// Render the player
+			scene.render(player, TileTy::Player);
 		}
-		well.fmt(f)
+		scene
 	}
-}
-
-//----------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-
 }

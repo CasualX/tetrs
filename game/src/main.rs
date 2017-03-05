@@ -8,25 +8,48 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Renderer;
 
-// mod events;
+use std::time::Duration;
+use std::thread;
 
-fn draw(renderer: &mut Renderer, state: &tetrs::State) {
-	// Create a new well with all the blocks in it
-	let mut well = state.well().clone();
-	if let Some(player) = state.player() {
-		well.etch(player);
+fn color(piece: Option<tetrs::Piece>) -> Color {
+	match piece {
+		Some(tetrs::Piece::O) => Color::RGB(0, 0, 170),
+		Some(tetrs::Piece::I) => Color::RGB(170, 0, 0),
+		Some(tetrs::Piece::S) => Color::RGB(0, 170, 0),
+		Some(tetrs::Piece::Z) => Color::RGB(0, 170, 170),
+		Some(tetrs::Piece::L) => Color::RGB(170, 0, 170),
+		Some(tetrs::Piece::J) => Color::RGB(170, 170, 0),
+		Some(tetrs::Piece::T) => Color::RGB(170, 85, 0),
+		None => Color::RGB(170, 170, 170),
 	}
+}
 
-	renderer.set_draw_color(Color::RGB(200, 200, 200));
+fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
+	for row in 0..scene.height() {
+		let line = scene.line(row);
+		for col in 0..scene.width() {
+			let tile = line[col as usize];
+			let rect = Rect::new(col * 16, row * 16, 16, 16);
 
-	// Draw the pieces
-	well.describe(|pt| {
-		let x = pt.x * 16;
-		let y = (well.height() - pt.y - 1) * 16;
-
-		let rc = Rect::new(x, y, 16, 16);
-		renderer.fill_rect(rc).unwrap();
-	});
+			use tetrs::TileTy::*;
+			match tile.tile_ty() {
+				Field => {
+					renderer.set_draw_color(color(tile.piece()));
+					renderer.fill_rect(rect).unwrap();
+				},
+				Ghost => {
+					renderer.set_draw_color(Color::RGB(50, 50, 50));
+					renderer.fill_rect(rect).unwrap();
+				},
+				Player => {
+					renderer.set_draw_color(color(tile.piece()));
+					renderer.fill_rect(rect).unwrap();
+				},
+				Background => {
+				},
+			};
+		}
+	}
 }
 
 fn main() {
@@ -78,8 +101,10 @@ fn main() {
 		renderer.set_draw_color(Color::RGB(0, 0, 0));
 		renderer.clear();
 		
-		draw(&mut renderer, &state);
+		draw(&mut renderer, &state.scene());
 
 		renderer.present();
+
+		thread::sleep(Duration::from_millis(1));
     }
 }

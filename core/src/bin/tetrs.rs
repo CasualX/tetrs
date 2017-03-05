@@ -63,6 +63,31 @@ fn bot(state: &mut tetrs::State) -> bool {
 	}
 }
 
+static TILESET: [char; 32] = [
+	'O', 'I', 'S', 'Z', 'L', 'J', 'T', 'x',
+	'_', '_', '_', '_', '_', '_', '_', 'x',
+	'O', 'I', 'S', 'Z', 'L', 'J', 'T', '□',
+	'.', '_', ' ', 'x', 'x', 'x', 'x', 'x',
+];
+
+fn draw(scene: &tetrs::Scene) {
+	for row in 0..scene.height() {
+		print!("|");
+		let line = scene.line(row);
+		for &tile in line {
+			let tile: u8 = tile.into();
+			let c = TILESET[(tile >> 3) as usize];
+			print!("{}", c);
+		}
+		print!("|\n");
+	}
+	print!("+");
+	for _ in 0..scene.width() {
+		print!("-");
+	}
+	print!("+\n");
+}
+
 const HATETRIS: bool = true;
 
 fn main() {
@@ -74,7 +99,7 @@ fn main() {
 	let mut rng = rand::thread_rng();
 
 	loop {
-		println!("{}", state);
+		draw(&state.scene());
 
 		// Check for pieces in the spawning area
 		if state.is_game_over() {
