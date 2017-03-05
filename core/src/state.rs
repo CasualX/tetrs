@@ -208,7 +208,9 @@ impl State {
 	}
 	/// It is game over when the well extends to the top 2 lines.
 	pub fn is_game_over(&self) -> bool {
-		self.well.test_line(self.well.height() - 1) || self.well.test_line(self.well.height() - 2)
+		let lines = self.well.lines();
+		let height = self.well.height() as usize;
+		lines[height - 1] != 0 || lines[height - 2] != 0
 	}
 	pub fn scene(&self) -> Scene {
 		let mut scene = self.scene.clone();

@@ -45,7 +45,9 @@ impl PlayW {
 			// walltouch: 6.52,
 		}
 	}
-	/// Evaluates a well.
+	/// Evaluates a well and returns a score.
+	///
+	/// The score is the sum of result of each category multiplied by the appropriated multiplier.
 	///
 	/// This value only has meaning in comparison to other wells.
 	/// A higher value indicates a better scoring well.
@@ -195,14 +197,14 @@ impl PlayI {
 #[test]
 fn tdd() {
 	let well = Well::from_data(10, &[
-		0b1111111111,
-		0b1111110111,
-		0b1111111111,
-		0b1111110110,
-		0b1001111110,
 		0b0000110000,
+		0b0111111001,
+		0b0110111111,
+		0b1111111111,
+		0b1110111111,
+		0b1111111111,
 	]);
-	let (heights_sum, lines, holes_sum, bumpiness, stacks) = PlayerBot::crunch(&well);
+	let (heights_sum, lines, holes_sum, bumpiness, stacks) = PlayW::crunch(&well);
 	assert_eq!(28, heights_sum);
 	assert_eq!(2, lines);
 	assert_eq!(2, holes_sum);

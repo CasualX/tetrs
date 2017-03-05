@@ -19,8 +19,10 @@ pub struct Well {
 	field: [Line; MAX_HEIGHT],
 }
 
+const MINOS_STR: &'static str = "□";
+
 impl Well {
-	/// Creates a new well with the given dimensions.
+	/// Creates an empty well with the given dimensions.
 	///
 	/// # Panics
 	///
@@ -34,10 +36,44 @@ impl Well {
 			field: [0; MAX_HEIGHT],
 		}
 	}
+	/// Creates a new well with the given data.
+	///
+	///# Panics
+	///
+	/// No minos may be found outside the well's width.
+	///
+	///# Examples
+	///
+	/// ```
+	///# use tetrs_core::Well;
+	///let well = Well::from_data(10, &[
+	///	0b0000110000,
+	///	0b0111111001,
+	///	0b0110111111,
+	///	0b1111111111,
+	///	0b1110111111,
+	///	0b1111111111,
+	///]);
+	///assert_eq!(format!("{}", well), "\
+	///	|    □□    |\n\
+	///	| □□□□□□  □|\n\
+	///	| □□ □□□□□□|\n\
+	///	|□□□□□□□□□□|\n\
+	///	|□□□ □□□□□□|\n\
+	///	|□□□□□□□□□□|\n\
+	///	+----------+");
+	/// ```
 	pub fn from_data(width: i32, lines: &[Line]) -> Well {
 		let mut well = Well::new(width, lines.len() as i32);
-		for row in 0..lines.len() {
-			well.field[row] = lines[row];
+		for (lhs, &rhs) in Iterator::zip(well.field[..lines.len()].iter_mut(), lines.iter().rev()) {
+			let mut rhs = rhs;
+			let mut line = 0;
+			for _ in 0..width {
+				line = (line << 1) | (rhs & 1);
+				rhs >>= 1;
+			}
+			assert_eq!(0, rhs, "found minos outside the well's width");
+			*lhs = line;
 		}
 		well
 	}
@@ -102,10 +138,6 @@ impl Well {
 		}
 		return false;
 	}
-	/// Tests if any block is set on this line.
-	pub fn test_line(&self, row: i32) -> bool {
-		self.field[row as usize] != 0
-	}
 	/// Etch the player into the field.
 	pub fn etch(&mut self, player: &Player) {
 		// Grab the mesh for this rotation
@@ -145,6 +177,8 @@ impl Well {
 	/// Removes a line.
 	///
 	/// Returns the removed line.
+	///
+	/// The lines above the removed line are shifted down and an empty line is inserted at the top.
 	pub fn remove_line(&mut self, row: i32) -> Line {
 		let line = self.field[row as usize];
 		for i in row as usize..MAX_HEIGHT - 1 {
@@ -154,7 +188,7 @@ impl Well {
 	}
 	/// Inserts a line.
 	///
-	/// Returns the top line that got bumped out.
+	/// The existing lines are shifted up and the top line that got bumped out is returned.
 	pub fn insert_line(&mut self, row: i32, line: Line) -> Line {
 		let old = self.field[self.height() as usize - 1];
 		for i in (row as usize..self.height() as usize - 1).rev() {
@@ -162,21 +196,6 @@ impl Well {
 		}
 		self.field[row as usize] = line;
 		old
-	}
-	/// Describes the field.
-	pub fn describe<F>(&self, mut f: F) where F: FnMut(Point) {
-		let height = self.height();
-		let width = self.width();
-		let _ = self.field[..height as usize];
-		for row in 0..height {
-			let mut line = self.field[row as usize];
-			for col in 0..width {
-				if line & 1 != 0 {
-					f(Point::new(col, row));
-				}
-				line >>= 1;
-			}
-		}
 	}
 }
 
@@ -271,17 +290,17 @@ impl fmt::Display for Well {
 			f.write_str("|")?;
 			let mut mask = 0x1;
 			for _ in 0..self.width() {
-				let graphic = if (row & mask) != 0 { "□" } else { bg };
+				let graphic = if (row & mask) != 0 { MINOS_STR } else { bg };
 				f.write_str(graphic)?;
 				mask <<= 1;
 			}
 			f.write_str("|\n")?;
-			if bg == " " {
-				bg = "_";
-			}
-			else if bg == "_" {
-				bg = ".";
-			}
+			// if bg == " " {
+			// 	bg = "_";
+			// }
+			// else if bg == "_" {
+			// 	bg = ".";
+			// }
 		}
 		f.write_str("+")?;
 		for _ in 0..self.width() {
