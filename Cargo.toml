@@ -1,2 +1,2 @@
 [workspace]
-members = ["core", "game"]
+members = ["engine", "game"]

@@ -1,2 +1,5 @@
+.vscode/
+
 Cargo.lock
 target/
+sdl2/

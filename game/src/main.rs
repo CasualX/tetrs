@@ -1,7 +1,7 @@
 /*!
 */
 
-extern crate tetrs_core as tetrs;
+extern crate tetrs;
 extern crate sdl2;
 
 use sdl2::pixels::Color;

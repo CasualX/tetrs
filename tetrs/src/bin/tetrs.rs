@@ -1,4 +1,4 @@
-extern crate tetrs_core as tetrs;
+extern crate tetrs;
 extern crate rand;
 
 use rand::Rng;

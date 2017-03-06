@@ -1,5 +1,5 @@
 [package]
-name = "tetrs-core"
+name = "tetrs"
 version = "0.1.0"
 authors = ["Casper <CasualX@GitHub.com>"]
 

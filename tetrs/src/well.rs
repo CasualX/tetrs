@@ -2,10 +2,10 @@
 Playing field.
 */
 
-use ::std::{fmt, ops};
+use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Point};
+use ::{Player};
 
 pub const MAX_HEIGHT: usize = 22;
 pub const MAX_WIDTH: usize = 16;
@@ -45,7 +45,7 @@ impl Well {
 	/// # Examples
 	///
 	/// ```
-	/// # use tetrs_core::Well;
+	/// # use tetrs::Well;
 	/// let well = Well::from_data(10, &[
 	/// 	0b0000110000,
 	/// 	0b0111111001,
@@ -199,7 +199,7 @@ impl Well {
 	/// # Examples
 	///
 	/// ```
-	/// # use tetrs_core::Well;
+	/// # use tetrs::Well;
 	///
 	/// let mut well = Well::from_data(10, &[
 	/// 	0b0000100000,
@@ -300,12 +300,12 @@ impl FromStr for Well {
 
 impl fmt::Display for Well {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		let mut bg = " ";
+		// let mut bg = " ";
 		for &row in self.field[0..self.height() as usize].iter().rev() {
 			f.write_str("|")?;
 			let mut mask = 0x1;
 			for _ in 0..self.width() {
-				let graphic = if (row & mask) != 0 { MINOS_STR } else { bg };
+				let graphic = if (row & mask) != 0 { MINOS_STR } else { " " };
 				f.write_str(graphic)?;
 				mask <<= 1;
 			}

@@ -1,9 +1,9 @@
 [package]
-name = "tetrs-sdl"
+name = "game"
 version = "0.1.0"
 
 build = "build.rs"
 
 [dependencies]
-tetrs-core = { path = "../core" }
+tetrs = { path = "../engine" }
 sdl2 = "0.29"
