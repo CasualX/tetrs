@@ -38,30 +38,30 @@ impl Well {
 	}
 	/// Creates a new well with the given data.
 	///
-	///# Panics
+	/// # Panics
 	///
 	/// No minos may be found outside the well's width.
 	///
-	///# Examples
+	/// # Examples
 	///
 	/// ```
-	///# use tetrs_core::Well;
-	///let well = Well::from_data(10, &[
-	///	0b0000110000,
-	///	0b0111111001,
-	///	0b0110111111,
-	///	0b1111111111,
-	///	0b1110111111,
-	///	0b1111111111,
-	///]);
-	///assert_eq!(format!("{}", well), "\
-	///	|    □□    |\n\
-	///	| □□□□□□  □|\n\
-	///	| □□ □□□□□□|\n\
-	///	|□□□□□□□□□□|\n\
-	///	|□□□ □□□□□□|\n\
-	///	|□□□□□□□□□□|\n\
-	///	+----------+");
+	/// # use tetrs_core::Well;
+	/// let well = Well::from_data(10, &[
+	/// 	0b0000110000,
+	/// 	0b0111111001,
+	/// 	0b0110111111,
+	/// 	0b1111111111,
+	/// 	0b1110111111,
+	/// 	0b1111111111,
+	/// ]);
+	/// assert_eq!(format!("{}", well), "\
+	/// 	|    □□    |\n\
+	/// 	| □□□□□□  □|\n\
+	/// 	| □□ □□□□□□|\n\
+	/// 	|□□□□□□□□□□|\n\
+	/// 	|□□□ □□□□□□|\n\
+	/// 	|□□□□□□□□□□|\n\
+	/// 	+----------+");
 	/// ```
 	pub fn from_data(width: i32, lines: &[Line]) -> Well {
 		let mut well = Well::new(width, lines.len() as i32);
@@ -108,7 +108,12 @@ impl Well {
 		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
 
 		// For clipping left/right walls
-		let line_mask = if player.pt.x < 0 { self.line_mask() << (-player.pt.x) as usize } else { self.line_mask() >> player.pt.x as usize };
+		let line_mask = if player.pt.x < 0 {
+			self.line_mask() << (-player.pt.x) as usize
+		}
+		else {
+			self.line_mask() >> player.pt.x as usize
+		};
 
 		for y in 0..4 {
 			// Check if part is sticking out of a wall
@@ -189,6 +194,30 @@ impl Well {
 	/// Inserts a line.
 	///
 	/// The existing lines are shifted up and the top line that got bumped out is returned.
+	/*
+	///
+	/// # Examples
+	///
+	/// ```
+	/// # use tetrs_core::Well;
+	///
+	/// let mut well = Well::from_data(10, &[
+	/// 	0b0000100000,
+	/// 	0b0110110001,
+	/// 	0b1100100001,
+	/// 	0b1111100011,
+	/// ]);
+	///
+	/// assert_eq!(0b0000100000, well.insert_line(1, 0b1111000011));
+	///
+	/// assert_eq!(well.lines(), &[
+	/// 	0b0110110001,
+	/// 	0b1100100001,
+	/// 	0b1111000011,
+	/// 	0b1111100011,
+	/// ]);
+	/// ```
+	*/
 	pub fn insert_line(&mut self, row: i32, line: Line) -> Line {
 		let old = self.field[self.height() as usize - 1];
 		for i in (row as usize..self.height() as usize - 1).rev() {
@@ -196,20 +225,6 @@ impl Well {
 		}
 		self.field[row as usize] = line;
 		old
-	}
-}
-
-/// Set all the blocks in lhs that aren't set in rhs.
-impl ops::Sub for Well {
-	type Output = Well;
-	fn sub(self, rhs: Well) -> Well {
-		assert_eq!(self.width(), rhs.width());
-		assert_eq!(self.height(), rhs.height());
-		let mut result = Well::new(self.width(), self.height());
-		for (result, (&lhs, &rhs)) in Iterator::zip(result.lines_mut().iter_mut(), Iterator::zip(self.lines().iter(), rhs.lines().iter())) {
-			*result = lhs & !rhs;
-		}
-		result
 	}
 }
 
