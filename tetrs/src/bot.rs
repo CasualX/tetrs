@@ -165,7 +165,7 @@ impl PlayI {
 		let pieces = [Piece::S, Piece::Z, Piece::O, Piece::I, Piece::L, Piece::J, Piece::T];
 		pieces[..].iter().fold((Piece::S, f64::INFINITY), |(bad_piece, bad_score), &piece| {
 			let PlayI { score, .. } = Self::best(weights, well, piece);
-			if score < bad_score {
+			if score > bad_score {
 				(piece, score)
 			}
 			else {

@@ -1,4 +1,4 @@
-extern crate tetrs_core as tetrs;
+extern crate tetrs;
 
 #[inline(never)]
 fn extern_tag(_: &str) {}

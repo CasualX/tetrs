@@ -14,9 +14,5 @@ keywords = ["tetris"]
 
 license = "MIT"
 
-[[bin]]
-name = "tetrs"
-doc = false
-
 [dependencies]
 rand = "0.3"

@@ -1,8 +1,15 @@
 /*!
+Well scene.
 */
 
 use ::{Player, Tile, TileTy, TILE_BG0, TILE_BG1, TILE_BG2, MAX_HEIGHT, MAX_WIDTH};
 
+/// Well scene.
+///
+/// The scene tracks the visual tiles in the well.
+///
+/// This allows a client to visualize the well based on which pieces were dropped here
+/// without requiring any of the game logic to work with this less efficient data structure.
 #[derive(Clone, Debug)]
 pub struct Scene {
 	width: i32,

@@ -90,8 +90,35 @@ fn draw(scene: &tetrs::Scene) {
 
 const HATETRIS: bool = true;
 
+const WELCOME_MESSAGE: &'static str = "
+Welcome to Adventure Tetrs!
+After the playing field is shown, you will be asked for input.
+
+>>> A, Q, LEFT
+Move the piece to the left.
+>>> D, RIGHT
+Move the piece to the right.
+>>> CW, RR, ROT
+Rotate the piece clockwise.
+>>> CCW, RL
+Rotate the piece counter-clockwise.
+>>> S, DOWN, SOFT, SOFT DROP
+Soft drop, move the piece down once.
+>>> W, Z, DROP, HARD DROP
+Hard drop, drops the piece down and locks into place.
+>>> G, GRAVITY
+Apply gravity, same as a soft drop.
+>>> QUIT, QUTI
+Quit the game.
+>>> H, HELP
+Print this help message.
+
+";
+
 fn main() {
 	clear_screen();
+	
+	println!("{}", WELCOME_MESSAGE);
 
 	let mut state = tetrs::State::new(10, 22);
 	let mut next_piece = if HATETRIS { tetrs::Piece::S } else { tetrs::Piece::L };

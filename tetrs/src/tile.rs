@@ -9,9 +9,13 @@ use ::Piece;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum TileTy {
+	/// This tile is a live player.
 	Player,
+	/// This tile is a location where the piece will land if dropped.
 	Ghost,
+	/// This tile is a block in the playing field.
 	Field,
+	/// This tile is a background block.
 	Background,
 }
 

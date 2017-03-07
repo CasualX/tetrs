@@ -1,8 +1,6 @@
-Tetrs
-=====
+Tetrs engine
+============
 
-Tetris written in Rust!
+Implements tetris engine logic.
 
-Note that this is just mainly just a tetris engine without fancy visualization!
-
-Run the ascii-based console renderer with `cargo run`. Very much WIP.
+A simple CLI tetris "adventure mode" is available with `cargo run --bin cli`.
