@@ -7,6 +7,8 @@ extern crate sdl2;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Renderer;
+use sdl2::GameControllerSubsystem;
+use sdl2::controller::GameController;
 
 use std::time::Duration;
 use std::thread;
@@ -52,10 +54,54 @@ fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
 	}
 }
 
+fn open_controller(gcs: &GameControllerSubsystem) -> GameController {
+	let available = match gcs.num_joysticks() {
+		Ok(n)  => n,
+		Err(e) => panic!("can't enumerate joysticks: {}", e),
+	};
+
+	println!("{} joysticks available", available);
+
+	let mut controller = None;
+
+	// Iterate over all available joysticks and look for game
+	// controllers.
+	for id in 0..available {
+		if gcs.is_game_controller(id) {
+			println!("Attempting to open controller {}", id);
+
+			match gcs.open(id) {
+				Ok(c) => {
+					// We managed to find and open a game controller,
+					// exit the loop
+					println!("Success: opened \"{}\"", c.name());
+					controller = Some(c);
+					break;
+				},
+				Err(e) => println!("failed: {:?}", e),
+			}
+		}
+		else {
+			println!("{} is not a game controller", id);
+		}
+	}
+
+	match controller {
+		Some(c) => {
+			println!("Controller mapping: {}", c.mapping());
+			return c;
+		},
+		None => panic!("Couldn't open any controller"),
+	};
+}
+
 fn main() {
 	// Initialize SDL2
 	let sdl_context = sdl2::init().unwrap();
 	let video = sdl_context.video().unwrap();
+
+	let gcs = sdl_context.game_controller().unwrap();
+	let _controller = open_controller(&gcs);
 
 	// Create the window
 	let window = video.window("Tetrs", 160, 352)
@@ -74,24 +120,37 @@ fn main() {
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
-			let next_piece = tetrs::PlayI::worst(&tetrs::PlayW::new(), state.well());
+			let next_piece = tetrs::PlayI::worst_piece(&tetrs::Weights::new(), state.well());
 			state.spawn(next_piece);
 		}
 
 		for e in events.poll_iter() {
             use sdl2::event::Event::*;
             use sdl2::keyboard::Keycode::*;
+			use sdl2::controller::Button;
 			match e {
 				Quit { .. } => break 'quit,
 				KeyDown { keycode, .. } => match keycode {
 					Some(Left) => { state.move_left(); },
 					Some(Right) => { state.move_right(); },
 					Some(Down) => { state.soft_drop(); },
-					Some(Up) => { state.hard_drop(); },
-					Some(Space) => { state.rotate_cw(); },
+					Some(Up) => { state.rotate_cw(); },
+					Some(Space) => { state.hard_drop(); },
+					Some(LCtrl) => { state.rotate_ccw(); },
 					_ => (),
 				},
-				_ => (),
+				ControllerButtonDown { button, .. } => match button {
+					Button::DPadLeft => { state.move_left(); },
+					Button::DPadRight => { state.move_right(); },
+					Button::DPadDown => { state.soft_drop(); },
+					Button::X => { state.rotate_ccw(); },
+					Button::B => { state.rotate_cw(); },
+					Button::A => { state.hard_drop(); },
+					_ => (),
+				},
+				e => {
+					println!("event: {:?}", e);
+				},
 			};
 		}
 

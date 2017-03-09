@@ -1,6 +1,6 @@
 
 mod bot;
-pub use self::bot::{PlayW, PlayI, PlayM};
+pub use self::bot::{Weights, PlayI, PlayM};
 
 mod pt;
 pub use self::pt::Point;

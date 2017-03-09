@@ -4,10 +4,10 @@ Simple player bot.
 
 use ::std::f64;
 
-use ::{Well, Rot, Piece, Player, Point, State, MAX_WIDTH};
+use ::{Well, Rot, Piece, Player, Point, State, MAX_WIDTH, MAX_HEIGHT};
 
 /// Weights for evaluating well.
-pub struct PlayW {
+pub struct Weights {
 	/// Factor for the total combined height of all the columns.
 	pub agg_height_f: f64,
 	/// Factor for the number of completed lines.
@@ -20,12 +20,12 @@ pub struct PlayW {
 	pub stacking_f: f64,
 }
 
-impl PlayW {
+impl Weights {
 	/// Returns some nice weights.
 	///
 	/// Gently appropriated from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
-	pub fn new() -> PlayW {
-		PlayW {
+	pub fn new() -> Weights {
+		Weights {
 			agg_height_f: -0.510066,
 			complete_lines_f: 0.760666,
 			holes_f: -0.35663,
@@ -105,7 +105,6 @@ impl PlayW {
 
 /// Player move.
 pub enum PlayM {
-	Idle,
 	MoveLeft,
 	MoveRight,
 	RotateCW,
@@ -124,7 +123,7 @@ pub struct PlayI {
 
 impl PlayI {
 	/// Brute force the best move with the given well and weights.
-	pub fn best(weights: &PlayW, well: &Well, piece: Piece) -> PlayI {
+	pub fn best(weights: &Weights, well: &Well, piece: Piece) -> PlayI {
 		// Brute force a solution...
 		let mut best_x = 0;
 		let mut best_rot = Rot::Zero;
@@ -161,11 +160,11 @@ impl PlayI {
 		}
 	}
 	/// Brute force the worst piece for the given well and weights.
-	pub fn worst(weights: &PlayW, well: &Well) -> Piece {
+	pub fn worst_piece(weights: &Weights, well: &Well) -> Piece {
 		let pieces = [Piece::S, Piece::Z, Piece::O, Piece::I, Piece::L, Piece::J, Piece::T];
-		pieces[..].iter().fold((Piece::S, f64::INFINITY), |(bad_piece, bad_score), &piece| {
+		pieces[..].iter().fold((pieces[0], f64::INFINITY), |(bad_piece, bad_score), &piece| {
 			let PlayI { score, .. } = Self::best(weights, well, piece);
-			if score > bad_score {
+			if score < bad_score {
 				(piece, score)
 			}
 			else {
@@ -173,24 +172,61 @@ impl PlayI {
 			}
 		}).0
 	}
-	pub fn play(&self, state: &State) -> PlayM {
-		match state.player() {
-			Some(&player) => {
-				if self.rot != player.rot {
-					PlayM::RotateCW
-				}
-				else if self.x < player.pt.x {
-					PlayM::MoveLeft
-				}
-				else if self.x > player.pt.x {
-					PlayM::MoveRight
-				}
-				else {
-					PlayM::HardDrop
-				}
-			},
-			None => PlayM::Idle,
+	/// Brute force the best piece for the given well and weights.
+	pub fn best_piece(weights: &Weights, well: &Well) -> Piece {
+		let pieces = [Piece::T, Piece::J, Piece::L, Piece::I, Piece::O, Piece::Z, Piece::S];
+		pieces[..].iter().fold((pieces[0], f64::NEG_INFINITY), |(good_piece, good_score), &piece| {
+			let PlayI { score, .. } = Self::best(weights, well, piece);
+			if score > good_score {
+				(piece, score)
+			}
+			else {
+				(good_piece, good_score)
+			}
+		}).0
+	}
+	fn piece(weights: &Weights, well: &Well, piece: Piece) -> f64 {
+		// We're going to flood fill the playing field to discover all possible play states
+		const STRIDE: usize = MAX_WIDTH * (MAX_HEIGHT + 4) * 4;
+		type Visited = [bool; STRIDE];
+		let visited = [false; STRIDE];
+
+		fn rec(visited: &mut Visited, weights: &Weights, well: &Well, player: Player) -> f64 {
+			// Check if the current position is unvisited
+			let i = (player.pt.y * STRIDE as i32 + (player.pt.x + 3) * 4 + player.rot as u8 as i32) as usize;
+			if visited[i] {
+				return f64::NEG_INFINITY;
+			}
+			visited[i] = true;
+			if well.test(&player) {
+				return f64::NEG_INFINITY;
+			}
+			// Try all possible moves from this location
+			let cw = rec(visited, weights, well, player.rotate_cw());
+			let ccw = rec(visited, weights, well, player.rotate_ccw());
+			let left = rec(visited, weights, well, player.move_left());
+			let right = rec(visited, weights, well, player.move_right());
+			
+			let player_down = player.move_down();
+			unimplemented!()
 		}
+		unimplemented!()
+	}
+	pub fn play(&self, state: &State) -> Option<PlayM> {
+		state.player().map(|player| {
+			if self.rot != player.rot {
+				PlayM::RotateCW
+			}
+			else if self.x < player.pt.x {
+				PlayM::MoveLeft
+			}
+			else if self.x > player.pt.x {
+				PlayM::MoveRight
+			}
+			else {
+				PlayM::HardDrop
+			}
+		})
 	}
 }
 
@@ -204,7 +240,7 @@ fn tdd() {
 		0b1110111111,
 		0b1111111111,
 	]);
-	let (heights_sum, lines, holes_sum, bumpiness, stacks) = PlayW::crunch(&well);
+	let (heights_sum, lines, holes_sum, bumpiness, stacks) = Weights::crunch(&well);
 	assert_eq!(28, heights_sum);
 	assert_eq!(2, lines);
 	assert_eq!(2, holes_sum);

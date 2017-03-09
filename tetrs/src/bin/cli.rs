@@ -45,17 +45,17 @@ fn input() -> Input {
 }
 
 fn bot(state: &mut tetrs::State) -> bool {
-	let weights = tetrs::PlayW::new();
+	let weights = tetrs::Weights::new();
 	let bot = tetrs::PlayI::best(&weights, state.well(), state.player().unwrap().piece);
 	loop {
 		let success = match bot.play(state) {
-			tetrs::PlayM::Idle => return true,
-			tetrs::PlayM::MoveLeft => state.move_left(),
-			tetrs::PlayM::MoveRight => state.move_right(),
-			tetrs::PlayM::RotateCW => state.rotate_cw(),
-			tetrs::PlayM::RotateCCW => state.rotate_ccw(),
-			tetrs::PlayM::SoftDrop => state.soft_drop(),
-			tetrs::PlayM::HardDrop => state.hard_drop(),
+			None => return true,
+			Some(tetrs::PlayM::MoveLeft) => state.move_left(),
+			Some(tetrs::PlayM::MoveRight) => state.move_right(),
+			Some(tetrs::PlayM::RotateCW) => state.rotate_cw(),
+			Some(tetrs::PlayM::RotateCCW) => state.rotate_ccw(),
+			Some(tetrs::PlayM::SoftDrop) => state.soft_drop(),
+			Some(tetrs::PlayM::HardDrop) => state.hard_drop(),
 		};
 		if !success {
 			return state.hard_drop();
@@ -150,7 +150,7 @@ fn main() {
 		// Spawn a new piece as needed
 		if state.player().is_none() {
 			next_piece = if HATETRIS {
-				tetrs::PlayI::worst(&tetrs::PlayW::new(), state.well())
+				tetrs::PlayI::worst_piece(&tetrs::Weights::new(), state.well())
 			}
 			else {
 				let r: u8 = rng.gen();
