@@ -15,23 +15,35 @@ use std::thread;
 
 fn color(piece: Option<tetrs::Piece>) -> Color {
 	match piece {
-		Some(tetrs::Piece::O) => Color::RGB(0, 0, 170),
-		Some(tetrs::Piece::I) => Color::RGB(170, 0, 0),
-		Some(tetrs::Piece::S) => Color::RGB(0, 170, 0),
-		Some(tetrs::Piece::Z) => Color::RGB(0, 170, 170),
-		Some(tetrs::Piece::L) => Color::RGB(170, 0, 170),
-		Some(tetrs::Piece::J) => Color::RGB(170, 170, 0),
-		Some(tetrs::Piece::T) => Color::RGB(170, 85, 0),
+		Some(tetrs::Piece::O) => Color::RGB(241, 238, 81),
+		Some(tetrs::Piece::I) => Color::RGB(83, 254, 248),
+		Some(tetrs::Piece::S) => Color::RGB(84, 254, 87),
+		Some(tetrs::Piece::Z) => Color::RGB(255, 85, 85),
+		Some(tetrs::Piece::L) => Color::RGB(254, 203, 36),
+		Some(tetrs::Piece::J) => Color::RGB(84, 85, 255),
+		Some(tetrs::Piece::T) => Color::RGB(255, 85, 254),
 		None => Color::RGB(170, 170, 170),
 	}
 }
 
 fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
+	// Draw the columns
+	renderer.set_draw_color(Color::RGB(46, 46, 46));
+	for col in 0..scene.width() {
+		let rect = Rect::new(col * 17, 0, 1, (scene.height() * 17) as u32);
+		renderer.fill_rect(rect).unwrap();
+	}
+	// Draw the rows
+	for row in 0..scene.height() {
+		let rect = Rect::new(0, row * 17, (scene.width() * 17) as u32, 1);
+		renderer.fill_rect(rect).unwrap();
+	}
+	// Draw the scene
 	for row in 0..scene.height() {
 		let line = scene.line(row);
 		for col in 0..scene.width() {
 			let tile = line[col as usize];
-			let rect = Rect::new(col * 16, row * 16, 16, 16);
+			let rect = Rect::new(1 + col * 17, 1 + row * 17, 16, 16);
 
 			use tetrs::TileTy::*;
 			match tile.tile_ty() {
@@ -104,7 +116,7 @@ fn main() {
 	let _controller = open_controller(&gcs);
 
 	// Create the window
-	let window = video.window("Tetrs", 160, 352)
+	let window = video.window("Tetrs", 171, 375)
 		.position_centered().opengl()
 		.build().unwrap();
 
@@ -144,12 +156,13 @@ fn main() {
 					Button::DPadRight => { state.move_right(); },
 					Button::DPadDown => { state.soft_drop(); },
 					Button::X => { state.rotate_ccw(); },
+					Button::Y => { state.hard_drop(); },
 					Button::B => { state.rotate_cw(); },
 					Button::A => { state.hard_drop(); },
 					_ => (),
 				},
 				e => {
-					println!("event: {:?}", e);
+					// println!("event: {:?}", e);
 				},
 			};
 		}

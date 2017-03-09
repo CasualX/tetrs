@@ -104,7 +104,7 @@ impl Weights {
 }
 
 /// Player move.
-pub enum PlayM {
+pub enum Play {
 	MoveLeft,
 	MoveRight,
 	RotateCW,
@@ -232,19 +232,19 @@ impl PlayI {
 		let start = Player::new(piece, Rot::Zero, Point::new(well.width() / 2 - 2, well.height() + 3));
 		rec(&mut visited, weights, well, start)
 	}
-	pub fn play(&self, state: &State) -> Option<PlayM> {
+	pub fn play(&self, state: &State) -> Option<Play> {
 		state.player().map(|player| {
 			if self.rot != player.rot {
-				PlayM::RotateCW
+				Play::RotateCW
 			}
 			else if self.x < player.pt.x {
-				PlayM::MoveLeft
+				Play::MoveLeft
 			}
 			else if self.x > player.pt.x {
-				PlayM::MoveRight
+				Play::MoveRight
 			}
 			else {
-				PlayM::HardDrop
+				Play::HardDrop
 			}
 		})
 	}

@@ -50,12 +50,12 @@ fn bot(state: &mut tetrs::State) -> bool {
 	loop {
 		let success = match bot.play(state) {
 			None => return true,
-			Some(tetrs::PlayM::MoveLeft) => state.move_left(),
-			Some(tetrs::PlayM::MoveRight) => state.move_right(),
-			Some(tetrs::PlayM::RotateCW) => state.rotate_cw(),
-			Some(tetrs::PlayM::RotateCCW) => state.rotate_ccw(),
-			Some(tetrs::PlayM::SoftDrop) => state.soft_drop(),
-			Some(tetrs::PlayM::HardDrop) => state.hard_drop(),
+			Some(tetrs::Play::MoveLeft) => state.move_left(),
+			Some(tetrs::Play::MoveRight) => state.move_right(),
+			Some(tetrs::Play::RotateCW) => state.rotate_cw(),
+			Some(tetrs::Play::RotateCCW) => state.rotate_ccw(),
+			Some(tetrs::Play::SoftDrop) => state.soft_drop(),
+			Some(tetrs::Play::HardDrop) => state.hard_drop(),
 		};
 		if !success {
 			return state.hard_drop();
