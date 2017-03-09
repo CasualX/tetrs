@@ -163,7 +163,7 @@ impl PlayI {
 	pub fn worst_piece(weights: &Weights, well: &Well) -> Piece {
 		let pieces = [Piece::S, Piece::Z, Piece::O, Piece::I, Piece::L, Piece::J, Piece::T];
 		pieces[..].iter().fold((pieces[0], f64::INFINITY), |(bad_piece, bad_score), &piece| {
-			let PlayI { score, .. } = Self::best(weights, well, piece);
+			let score = Self::piece(weights, well, piece);
 			if score < bad_score {
 				(piece, score)
 			}
@@ -176,7 +176,7 @@ impl PlayI {
 	pub fn best_piece(weights: &Weights, well: &Well) -> Piece {
 		let pieces = [Piece::T, Piece::J, Piece::L, Piece::I, Piece::O, Piece::Z, Piece::S];
 		pieces[..].iter().fold((pieces[0], f64::NEG_INFINITY), |(good_piece, good_score), &piece| {
-			let PlayI { score, .. } = Self::best(weights, well, piece);
+			let score = Self::piece(weights, well, piece);
 			if score > good_score {
 				(piece, score)
 			}
@@ -186,18 +186,28 @@ impl PlayI {
 		}).0
 	}
 	fn piece(weights: &Weights, well: &Well, piece: Piece) -> f64 {
-		// We're going to flood fill the playing field to discover all possible play states
-		const STRIDE: usize = MAX_WIDTH * (MAX_HEIGHT + 4) * 4;
-		type Visited = [bool; STRIDE];
-		let visited = [false; STRIDE];
+		// Recursive floodfill to find all the playable states
 
+		// The number of states in a single row:
+		// `MAX_WIDTH` plus `3` (for overlap with the well) times `4` (the number of rotations)
+		const STRIDE: usize = (MAX_WIDTH + 3) * 4;
+		// The number of rows starting all the way up to the top
+		const SIZE: usize = STRIDE * (MAX_HEIGHT + 4);
+		// Mark every place with a visited flag to know to not recurse in here
+		type Visited = [bool; SIZE];
+		let mut visited = [false; SIZE];
+
+		// Recursively visit all states
 		fn rec(visited: &mut Visited, weights: &Weights, well: &Well, player: Player) -> f64 {
-			// Check if the current position is unvisited
+			// Check if the current position has been visited
 			let i = (player.pt.y * STRIDE as i32 + (player.pt.x + 3) * 4 + player.rot as u8 as i32) as usize;
+			// println!("player:{:?} STRIDE:{}", player, STRIDE);
 			if visited[i] {
 				return f64::NEG_INFINITY;
 			}
 			visited[i] = true;
+			// Test if this is a valid move
+			// FIXME! Does not evaluate wall-kicks!
 			if well.test(&player) {
 				return f64::NEG_INFINITY;
 			}
@@ -206,11 +216,21 @@ impl PlayI {
 			let ccw = rec(visited, weights, well, player.rotate_ccw());
 			let left = rec(visited, weights, well, player.move_left());
 			let right = rec(visited, weights, well, player.move_right());
-			
-			let player_down = player.move_down();
-			unimplemented!()
+			// Finally try moving one down, and eval well
+			let player_down = if well.test(&player.move_down()) {
+				let mut well = well.clone();
+				well.etch(&player);
+				weights.eval(&well)
+			}
+			else {
+				rec(visited, weights, well, player.move_down())
+			};
+			// Brute force for the highest valued placement
+			cw.max(ccw).max(left).max(right).max(player_down)
 		}
-		unimplemented!()
+
+		let start = Player::new(piece, Rot::Zero, Point::new(well.width() / 2 - 2, well.height() + 3));
+		rec(&mut visited, weights, well, start)
 	}
 	pub fn play(&self, state: &State) -> Option<PlayM> {
 		state.player().map(|player| {
