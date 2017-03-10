@@ -104,7 +104,9 @@ impl Weights {
 }
 
 /// Player move.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Play {
+	Idle,
 	MoveLeft,
 	MoveRight,
 	RotateCW,
@@ -185,6 +187,60 @@ impl PlayI {
 			}
 		}).0
 	}
+	fn path(weights: &Weights, well: &Well, player: Player) -> Vec<Play> {
+		const STRIDE: usize = (MAX_WIDTH + 3) * 4;
+		const SIZE: usize = STRIDE * (MAX_HEIGHT + 4);
+		type Visited = [bool; SIZE];
+		let mut visited = [false; SIZE];
+
+		struct Iter {
+			next: Play,
+			rot: Rot,
+			pt: Point,
+		}
+		let mut path: Vec<Iter> = Vec::new();
+		path.push(Iter {
+			next: Play::MoveLeft,
+			rot: player.rot,
+			pt: player.pt,
+		});
+		// Depth first floodfill
+		while let Some(player) = path.last().cloned() {
+			if player.next == Play::Idle {
+				path.pop();
+				continue;
+			}
+			// Check if the current position has been visited
+			let i = (player.pt.y as i32 * STRIDE as i32 + (player.pt.x as i32 + 3) * 4 + player.rot as u8 as i32) as usize;
+			// println!("player:{:?} STRIDE:{}", player, STRIDE);
+			if visited[i] {
+				return f64::NEG_INFINITY;
+			}
+			visited[i] = true;
+			// Test if this is a valid move
+			// FIXME! Does not evaluate wall-kicks!
+			if well.test(&player) {
+				return f64::NEG_INFINITY;
+			}
+			// Try all possible moves from this location
+			let cw = rec(visited, weights, well, player.rotate_cw());
+			let ccw = rec(visited, weights, well, player.rotate_ccw());
+			let left = rec(visited, weights, well, player.move_left());
+			let right = rec(visited, weights, well, player.move_right());
+			// Finally try moving one down, and eval well
+			let player_down = if well.test(&player.move_down()) {
+				let mut well = well.clone();
+				well.etch(&player);
+				weights.eval(&well)
+			}
+			else {
+				rec(visited, weights, well, player.move_down())
+			};
+			// Brute force for the highest valued placement
+			cw.max(ccw).max(left).max(right).max(player_down)
+		}
+		unimplemented!()
+	}
 	fn piece(weights: &Weights, well: &Well, piece: Piece) -> f64 {
 		// Recursive floodfill to find all the playable states
 
@@ -232,7 +288,7 @@ impl PlayI {
 		let start = Player::new(piece, Rot::Zero, Point::new(well.width() / 2 - 2, well.height() + 3));
 		rec(&mut visited, weights, well, start)
 	}
-	pub fn play(&self, state: &State) -> Option<Play> {
+	pub fn play(&self, state: &State) -> Play {
 		state.player().map(|player| {
 			if self.rot != player.rot {
 				Play::RotateCW
@@ -246,7 +302,7 @@ impl PlayI {
 			else {
 				Play::HardDrop
 			}
-		})
+		}).unwrap_or(Play::Idle)
 	}
 }
 

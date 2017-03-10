@@ -49,13 +49,13 @@ fn bot(state: &mut tetrs::State) -> bool {
 	let bot = tetrs::PlayI::best(&weights, state.well(), state.player().unwrap().piece);
 	loop {
 		let success = match bot.play(state) {
-			None => return true,
-			Some(tetrs::Play::MoveLeft) => state.move_left(),
-			Some(tetrs::Play::MoveRight) => state.move_right(),
-			Some(tetrs::Play::RotateCW) => state.rotate_cw(),
-			Some(tetrs::Play::RotateCCW) => state.rotate_ccw(),
-			Some(tetrs::Play::SoftDrop) => state.soft_drop(),
-			Some(tetrs::Play::HardDrop) => state.hard_drop(),
+			tetrs::Play::Idle => return true,
+			tetrs::Play::MoveLeft => state.move_left(),
+			tetrs::Play::MoveRight => state.move_right(),
+			tetrs::Play::RotateCW => state.rotate_cw(),
+			tetrs::Play::RotateCCW => state.rotate_ccw(),
+			tetrs::Play::SoftDrop => state.soft_drop(),
+			tetrs::Play::HardDrop => state.hard_drop(),
 		};
 		if !success {
 			return state.hard_drop();
