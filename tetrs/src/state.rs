@@ -15,7 +15,7 @@ impl State {
 	/// Creates a new game state.
 	///
 	/// Don't forget to spawn a player!
-	pub fn new(width: i32, height: i32) -> State {
+	pub fn new(width: i8, height: i8) -> State {
 		State {
 			player: None,
 			well: Well::new(width, height),
@@ -166,7 +166,7 @@ impl State {
 	/// Check for line clears.
 	///
 	/// The callback is called for every cleared line with the row being cleared from bottom to top.
-	pub fn clear_lines<F>(&mut self, mut f: F) where F: FnMut(i32) {
+	pub fn clear_lines<F>(&mut self, mut f: F) where F: FnMut(i8) {
 		let mut lines_cleared = 0;
 		let line_mask = self.well.line_mask();
 		let mut row = 0;
@@ -201,7 +201,7 @@ impl State {
 			rot: Rot::Zero,
 			pt: Point {
 				x: self.well.width() / 2 - 2,
-				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i32,
+				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i8,
 			},
 		});
 		self.well.test(&self.player.unwrap())

@@ -14,8 +14,9 @@ pub type Line = u16;
 
 #[derive(Clone, Debug)]
 pub struct Well {
-	width: i16,
-	height: i16,
+	width: i8,
+	height: i8,
+	_pad: i16,
 	field: [Line; MAX_HEIGHT],
 }
 
@@ -27,12 +28,13 @@ impl Well {
 	/// # Panics
 	///
 	/// The width must be ∈ [4, 16] and the height must be ∈ [4, 22].
-	pub fn new(width: i32, height: i32) -> Well {
-		assert!(width >= 4 && width <= MAX_WIDTH as i32, "width must be ∈ [4, {}]", MAX_WIDTH);
-		assert!(height >= 4 && height <= MAX_HEIGHT as i32, "height must be ∈ [4, {}]", MAX_HEIGHT);
+	pub fn new(width: i8, height: i8) -> Well {
+		assert!(width >= 4 && width <= MAX_WIDTH as i8, "width must be ∈ [4, {}]", MAX_WIDTH);
+		assert!(height >= 4 && height <= MAX_HEIGHT as i8, "height must be ∈ [4, {}]", MAX_HEIGHT);
 		Well {
-			width: width as i16,
-			height: height as i16,
+			width: width as i8,
+			height: height as i8,
+			_pad: 0,
 			field: [0; MAX_HEIGHT],
 		}
 	}
@@ -63,8 +65,8 @@ impl Well {
 	/// 	|□□□□□□□□□□|\n\
 	/// 	+----------+");
 	/// ```
-	pub fn from_data(width: i32, lines: &[Line]) -> Well {
-		let mut well = Well::new(width, lines.len() as i32);
+	pub fn from_data(width: i8, lines: &[Line]) -> Well {
+		let mut well = Well::new(width, lines.len() as i8);
 		for (lhs, &rhs) in Iterator::zip(well.field[..lines.len()].iter_mut(), lines.iter().rev()) {
 			let mut rhs = rhs;
 			let mut line = 0;
@@ -78,12 +80,12 @@ impl Well {
 		well
 	}
 	/// Returns the width of the well.
-	pub fn width(&self) -> i32 {
-		self.width as i32
+	pub fn width(&self) -> i8 {
+		self.width
 	}
 	/// Returns the height of the well.
-	pub fn height(&self) -> i32 {
-		self.height as i32
+	pub fn height(&self) -> i8 {
+		self.height
 	}
 	/// Returns the field as lines.
 	pub fn lines(&self) -> &[Line] {
@@ -97,10 +99,10 @@ impl Well {
 	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
 	pub fn test(&self, player: &Player) -> bool {
 		// Early reject out of bounds
-		if player.pt.x < (0 - 4) || player.pt.x >= self.width() || player.pt.y < 0 {
+		if player.pt.x < (0 - 4) || player.pt.x >= self.width || player.pt.y < 0 {
 			return true;
 		}
-		if player.pt.y >= self.height() + 4 {
+		if player.pt.y >= self.height + 4 {
 			return false;
 		}
 
@@ -128,7 +130,7 @@ impl Well {
 				}
 			}
 			// If this row is below the ceiling
-			else if row < self.height() {
+			else if row < self.height {
 				// Render the mesh for this line
 				let cg_line = if player.pt.x < 0 {
 					(mesh[y as usize] as Line) >> (-player.pt.x) as usize
@@ -151,7 +153,7 @@ impl Well {
 		for y in 0..4 {
 			// Clip the affected row to the field
 			let row = player.pt.y - y;
-			if row >= 0 && row < self.height() {
+			if row >= 0 && row < self.height {
 				// Render the mesh for this line
 				let cg_line = if player.pt.x < 0 {
 					(mesh[y as usize] as Line) >> (-player.pt.x) as usize
@@ -168,13 +170,13 @@ impl Well {
 		(1 << self.width() as usize) - 1
 	}
 	/// Gets a line.
-	pub fn line(&self, row: i32) -> Line {
+	pub fn line(&self, row: i8) -> Line {
 		self.field[row as usize]
 	}
 	/// Sets a line.
 	///
 	/// Returns the erased line.
-	pub fn set_line(&mut self, row: i32, line: Line) -> Line {
+	pub fn set_line(&mut self, row: i8, line: Line) -> Line {
 		let old = self.field[row as usize];
 		self.field[row as usize] = line;
 		old
@@ -184,7 +186,7 @@ impl Well {
 	/// Returns the removed line.
 	///
 	/// The lines above the removed line are shifted down and an empty line is inserted at the top.
-	pub fn remove_line(&mut self, row: i32) -> Line {
+	pub fn remove_line(&mut self, row: i8) -> Line {
 		let line = self.field[row as usize];
 		for i in row as usize..MAX_HEIGHT - 1 {
 			self.field[i] = self.field[i + 1];
@@ -287,8 +289,9 @@ impl FromStr for Well {
 
 		if let Some(width) = width {
 			Ok(Well {
-				width: width as i16,
-				height: height as i16,
+				width: width as i8,
+				height: height as i8,
+				_pad: 0,
 				field: field,
 			})
 		}

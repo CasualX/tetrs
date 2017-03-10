@@ -12,12 +12,12 @@ use ::{Player, Tile, TileTy, TILE_BG0, TILE_BG1, TILE_BG2, MAX_HEIGHT, MAX_WIDTH
 /// without requiring any of the game logic to work with this less efficient data structure.
 #[derive(Clone, Debug)]
 pub struct Scene {
-	width: i32,
-	height: i32,
+	width: i8,
+	height: i8,
 	tiles: [[Tile; MAX_WIDTH]; MAX_HEIGHT]
 }
 impl Scene {
-	pub fn new(width: i32, height: i32) -> Scene {
+	pub fn new(width: i8, height: i8) -> Scene {
 		let mut bg = [[TILE_BG0; MAX_WIDTH]; MAX_HEIGHT];
 		bg[height as usize - 2] = [TILE_BG1; MAX_WIDTH];
 		bg[height as usize - 1] = [TILE_BG2; MAX_WIDTH];
@@ -27,13 +27,13 @@ impl Scene {
 			tiles: bg,
 		}
 	}
-	pub fn width(&self) -> i32 {
+	pub fn width(&self) -> i8 {
 		self.width
 	}
-	pub fn height(&self) -> i32 {
+	pub fn height(&self) -> i8 {
 		self.height
 	}
-	pub fn line(&self, row: i32) -> &[Tile] {
+	pub fn line(&self, row: i8) -> &[Tile] {
 		&self.tiles[(self.height - 1 - row) as usize][..self.width as usize]
 	}
 	pub fn render(&mut self, player: &Player, tile_ty: TileTy) {
@@ -57,7 +57,7 @@ impl Scene {
 			}
 		}
 	}
-	pub fn remove_line(&mut self, row: i32) {
+	pub fn remove_line(&mut self, row: i8) {
 		let top = (self.height - 2) as usize;
 		let _ = self.tiles[row as usize..top];
 		for i in row as usize..top - 1 {

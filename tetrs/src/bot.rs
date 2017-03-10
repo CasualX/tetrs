@@ -116,7 +116,7 @@ pub enum Play {
 /// Player AI.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PlayI {
-	x: i32,
+	x: i8,
 	rot: Rot,
 	score: f64,
 }
@@ -200,7 +200,7 @@ impl PlayI {
 		// Recursively visit all states
 		fn rec(visited: &mut Visited, weights: &Weights, well: &Well, player: Player) -> f64 {
 			// Check if the current position has been visited
-			let i = (player.pt.y * STRIDE as i32 + (player.pt.x + 3) * 4 + player.rot as u8 as i32) as usize;
+			let i = (player.pt.y as i32 * STRIDE as i32 + (player.pt.x as i32 + 3) * 4 + player.rot as u8 as i32) as usize;
 			// println!("player:{:?} STRIDE:{}", player, STRIDE);
 			if visited[i] {
 				return f64::NEG_INFINITY;

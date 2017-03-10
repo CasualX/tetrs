@@ -29,19 +29,21 @@ fn color(piece: Option<tetrs::Piece>) -> Color {
 fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
 	// Draw the columns
 	renderer.set_draw_color(Color::RGB(46, 46, 46));
-	for col in 0..scene.width() {
-		let rect = Rect::new(col * 17, 0, 1, (scene.height() * 17) as u32);
+	let width = scene.width() as i32;
+	let height = scene.height() as i32;
+	for col in 0..width {
+		let rect = Rect::new(col * 17, 0, 1, (height * 17) as u32);
 		renderer.fill_rect(rect).unwrap();
 	}
 	// Draw the rows
-	for row in 0..scene.height() {
-		let rect = Rect::new(0, row * 17, (scene.width() * 17) as u32, 1);
+	for row in 0..height {
+		let rect = Rect::new(0, row * 17, (width * 17) as u32, 1);
 		renderer.fill_rect(rect).unwrap();
 	}
 	// Draw the scene
-	for row in 0..scene.height() {
-		let line = scene.line(row);
-		for col in 0..scene.width() {
+	for row in 0..height {
+		let line = scene.line(row as i8);
+		for col in 0..width {
 			let tile = line[col as usize];
 			let rect = Rect::new(1 + col * 17, 1 + row * 17, 16, 16);
 
