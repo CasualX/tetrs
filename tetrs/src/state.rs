@@ -49,7 +49,7 @@ impl State {
 	pub fn move_left(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_left();
-		if !self.well.test(&next) {
+		if !self.well.test(next) {
 			self.player = Some(next);
 			true
 		}
@@ -63,7 +63,7 @@ impl State {
 	pub fn move_right(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_right();
-		if !self.well.test(&next) {
+		if !self.well.test(next) {
 			self.player = Some(next);
 			true
 		}
@@ -79,7 +79,7 @@ impl State {
 	pub fn rotate_cw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_cw();
-		if !self.well.test(&next) || self.wall_kick(&mut next, Rot::cw) {
+		if !self.well.test(next) || self.wall_kick(&mut next, Rot::cw) {
 			self.player = Some(next);
 			true
 		}
@@ -95,7 +95,7 @@ impl State {
 	pub fn rotate_ccw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_ccw();
-		if !self.well.test(&next) || self.wall_kick(&mut next, Rot::ccw) {
+		if !self.well.test(next) || self.wall_kick(&mut next, Rot::ccw) {
 			self.player = Some(next);
 			true
 		}
@@ -106,19 +106,19 @@ impl State {
 	fn wall_kick<F>(&self, player: &mut Player, mut f: F) -> bool where F: FnMut(Rot) -> Rot {
 		for _ in 0..3 {
 			player.pt.x -= 1;
-			if !self.well.test(&player) {
+			if !self.well.test(*player) {
 				return true;
 			}
 			player.pt.x += 2;
-			if !self.well.test(&player) {
+			if !self.well.test(*player) {
 				return true;
 			}
 			player.pt.x -= 3;
-			if !self.well.test(&player) {
+			if !self.well.test(*player) {
 				return true;
 			}
 			player.pt.x += 4;
-			if !self.well.test(&player) {
+			if !self.well.test(*player) {
 				return true;
 			}
 			player.pt.x -= 2;
@@ -132,7 +132,7 @@ impl State {
 	pub fn soft_drop(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_down();
-		if !self.well.test(&next) {
+		if !self.well.test(next) {
 			self.player = Some(next);
 			true
 		}
@@ -149,7 +149,7 @@ impl State {
 		let mut player = match self.player { Some(pl) => pl, None => return false };
 		loop {
 			let next = player.move_down();
-			if self.well.test(&next) {
+			if self.well.test(next) {
 				self.player = Some(player);
 				self.lock();
 				return true;
@@ -185,8 +185,8 @@ impl State {
 	/// Etch the player to the well and kill it.
 	pub fn lock(&mut self) {
 		if let Some(pl) = self.player {
-			self.well.etch(&pl);
-			self.scene.render(&pl, TileTy::Field);
+			self.well.etch(pl);
+			self.scene.render(pl, TileTy::Field);
 			self.player = None;
 		}
 	}
@@ -204,7 +204,7 @@ impl State {
 				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i8,
 			},
 		});
-		self.well.test(&self.player.unwrap())
+		self.well.test(self.player.unwrap())
 	}
 	/// It is game over when the well extends to the top 2 lines.
 	pub fn is_game_over(&self) -> bool {
@@ -214,13 +214,13 @@ impl State {
 	}
 	pub fn scene(&self) -> Scene {
 		let mut scene = self.scene.clone();
-		if let Some(player) = self.player() {
+		if let Some(&player) = self.player() {
 			// Drop the player down to visualize its ghost
-			let mut ghost = *player;
+			let mut ghost = player;
 			loop {
 				let next = ghost.move_down();
-				if self.well.test(&next) {
-					scene.render(&ghost, TileTy::Ghost);
+				if self.well.test(next) {
+					scene.render(ghost, TileTy::Ghost);
 					break;
 				}
 				ghost = next;

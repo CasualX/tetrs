@@ -163,12 +163,12 @@ impl PlayI {
 					path.last_mut().unwrap().0 = Play::SoftDrop;
 					let next = player.move_down();
 					if !visit(next) {
-						if !well.test(&next) {
+						if !well.test(next) {
 							path.push((Play::Idle, next));
 						}
 						else {
 							let mut well = well.clone();
-							well.etch(&player);
+							well.etch(player);
 							let score = weights.eval(&well);
 							if score > best.score {
 								best.score = score;
@@ -181,28 +181,28 @@ impl PlayI {
 				Play::SoftDrop => {
 					path.last_mut().unwrap().0 = Play::MoveLeft;
 					let next = player.move_left();
-					if !visit(next) && !well.test(&next) {
+					if !visit(next) && !well.test(next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::MoveLeft => {
 					path.last_mut().unwrap().0 = Play::MoveRight;
 					let next = player.move_right();
-					if !visit(next) && !well.test(&next) {
+					if !visit(next) && !well.test(next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::MoveRight => {
 					path.last_mut().unwrap().0 = Play::RotateCW;
 					let next = player.rotate_cw();
-					if !visit(next) && !well.test(&next) {
+					if !visit(next) && !well.test(next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::RotateCW => {
 					path.last_mut().unwrap().0 = Play::RotateCCW;
 					let next = player.rotate_ccw();
-					if !visit(next) && !well.test(&next) {
+					if !visit(next) && !well.test(next) {
 						path.push((Play::Idle, next));
 					}
 				},
@@ -264,7 +264,7 @@ impl PlayI {
 			visited[i] = true;
 			// Test if this is a valid move
 			// FIXME! Does not evaluate wall-kicks!
-			if well.test(&player) {
+			if well.test(player) {
 				return f64::NEG_INFINITY;
 			}
 			// Try all possible moves from this location
@@ -273,9 +273,9 @@ impl PlayI {
 			let left = rec(visited, weights, well, player.move_left());
 			let right = rec(visited, weights, well, player.move_right());
 			// Finally try moving one down, and eval well
-			let player_down = if well.test(&player.move_down()) {
+			let player_down = if well.test(player.move_down()) {
 				let mut well = well.clone();
-				well.etch(&player);
+				well.etch(player);
 				weights.eval(&well)
 			}
 			else {

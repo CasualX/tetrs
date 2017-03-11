@@ -97,7 +97,7 @@ impl Well {
 	/// Hit tests the player against the field.
 	///
 	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
-	pub fn test(&self, player: &Player) -> bool {
+	pub fn test(&self, player: Player) -> bool {
 		// Early reject out of bounds
 		if player.pt.x < (0 - 4) || player.pt.x >= self.width || player.pt.y < 0 {
 			return true;
@@ -146,7 +146,7 @@ impl Well {
 		return false;
 	}
 	/// Etch the player into the field.
-	pub fn etch(&mut self, player: &Player) {
+	pub fn etch(&mut self, player: Player) {
 		// Grab the mesh for this rotation
 		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
 		// Etch the 4x4 mask into the field
@@ -342,9 +342,9 @@ mod tests {
 		let p2 = Player::new(Piece::O, Rot::Zero, Point::new(-1, 2));
 		let p3 = Player::new(Piece::I, Rot::One, Point::new(7, 3));
 
-		well.etch(&p1);
-		well.etch(&p2);
-		well.etch(&p3);
+		well.etch(p1);
+		well.etch(p2);
+		well.etch(p3);
 		println!("\n{}", well);
 
 		well
@@ -364,16 +364,16 @@ mod tests {
 	fn hit_test() {
 		let well = well();
 		// Within the field bounds
-		assert!(!well.test(&Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
-		assert!(!well.test(&Player::new(Piece::J, Rot::Three, Point::new(5, 2))));
+		assert!(!well.test(Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
+		assert!(!well.test(Player::new(Piece::J, Rot::Three, Point::new(5, 2))));
 		// Clip left wall
-		assert!(well.test(&Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
+		assert!(well.test(Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
 		// Clip with existing pieces
-		assert!(well.test(&Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
+		assert!(well.test(Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
 		// Clip right wall
-		assert!(well.test(&Player::new(Piece::O, Rot::One, Point::new(9, 1))));
+		assert!(well.test(Player::new(Piece::O, Rot::One, Point::new(9, 1))));
 		// Clip the bottom
-		assert!(well.test(&Player::new(Piece::J, Rot::Three, Point::new(5, 1))));
+		assert!(well.test(Player::new(Piece::J, Rot::Three, Point::new(5, 1))));
 	}
 
 	#[test]

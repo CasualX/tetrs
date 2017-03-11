@@ -36,7 +36,7 @@ impl Scene {
 	pub fn line(&self, row: i8) -> &[Tile] {
 		&self.tiles[(self.height - 1 - row) as usize][..self.width as usize]
 	}
-	pub fn render(&mut self, player: &Player, tile_ty: TileTy) {
+	pub fn render(&mut self, player: Player, tile_ty: TileTy) {
 		// Get the unperturbed mesh
 		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
 		let mut part_id = 0;
