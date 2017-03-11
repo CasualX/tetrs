@@ -4,7 +4,7 @@ Simple player bot.
 
 use ::std::f64;
 
-use ::{Well, Rot, Piece, Player, Point, State, MAX_WIDTH, MAX_HEIGHT};
+use ::{Well, Rot, Piece, Player, Point, MAX_WIDTH, MAX_HEIGHT};
 
 /// Weights for evaluating well.
 pub struct Weights {
@@ -27,7 +27,7 @@ impl Weights {
 	pub fn new() -> Weights {
 		Weights {
 			agg_height_f: -0.510066,
-			complete_lines_f: 0.760666,
+			complete_lines_f: 0.0,//0.760666,
 			holes_f: -0.35663,
 			bumpiness_f: -0.184483,
 			stacking_f: -0.5,
@@ -52,6 +52,13 @@ impl Weights {
 	/// This value only has meaning in comparison to other wells.
 	/// A higher value indicates a better scoring well.
 	pub fn eval(&self, well: &Well) -> f64 {
+		// Quick hack to detect game over
+		let lines = well.lines();
+		let height = well.height() as usize;
+		if lines[height - 1] != 0 || lines[height - 2] != 0 {
+			return f64::NEG_INFINITY;
+		}
+
 		let (agg_height, completed_lines, holes, bumpiness, stacks) = Self::crunch(well);
 		return
 			self.agg_height_f * agg_height as f64 +
@@ -117,50 +124,96 @@ pub enum Play {
 }
 
 /// Player AI.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PlayI {
-	x: i8,
-	rot: Rot,
-	score: f64,
+	pub score: f64,
+	pub play: Vec<Play>,
 }
 
 impl PlayI {
-	/// Brute force the best move with the given well and weights.
-	pub fn best(weights: &Weights, well: &Well, piece: Piece) -> PlayI {
-		// Brute force a solution...
-		let mut best_x = 0;
-		let mut best_rot = Rot::Zero;
-		let mut best_score = f64::NEG_INFINITY;
-		for rot in 0..3 {
-			for x in -3..well.width() {
-				let rot = Rot::from(rot);
-				let mut player = Player::new(piece, rot, Point::new(x, well.height()));
-				// Early reject against the walls
-				if well.test(&player) {
-					continue;
-				}
-				// Drop the piece down
-				while !well.test(&player) {
-					player.pt.y -= 1;
-				}
-				player.pt.y += 1;
-				// Evaluate the well
-				let mut well = well.clone();
-				well.etch(&player);
-				let score = weights.eval(&well);
-				// Keep the best scoring move
-				if score > best_score {
-					best_x = x;
-					best_rot = rot;
-					best_score = score;
-				}
+	/// Calculate the best move with the given weights.
+	pub fn play(weights: &Weights, well: &Well, player: Player) -> PlayI {
+		// Keep track of which states we've visited
+		// TODO! Use a bit array instead, reduces allocation by a factor of 8
+		const STRIDE: usize = (MAX_WIDTH + 3) * 4;
+		const SIZE: usize = STRIDE * (MAX_HEIGHT + 4);
+		let mut visited = [false; SIZE];
+		let mut visit = |next: Player| -> bool {
+			let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+			if !visited[i] {
+				visited[i] = true;
+				false
+			}
+			else {
+				true
+			}
+		};
+		// Depth-first traversal through the possible game states
+		let mut path = Vec::new();
+		path.push((Play::Idle, player));
+		// Accumulate for the best possible game state
+		let mut best = PlayI {
+			score: f64::NEG_INFINITY,
+			play: Vec::new(),
+		};
+		// While we have unexplored game states
+		while let Some(&(play, player)) = path.last() {
+			match play {
+				Play::Idle => {
+					path.last_mut().unwrap().0 = Play::SoftDrop;
+					let next = player.move_down();
+					if !visit(next) {
+						if !well.test(&next) {
+							path.push((Play::Idle, next));
+						}
+						else {
+							let mut well = well.clone();
+							well.etch(&player);
+							let score = weights.eval(&well);
+							if score > best.score {
+								best.score = score;
+								best.play.clear();
+								best.play.extend(path.iter().map(|&(play, _)| play));
+							}
+						}
+					}
+				},
+				Play::SoftDrop => {
+					path.last_mut().unwrap().0 = Play::MoveLeft;
+					let next = player.move_left();
+					if !visit(next) && !well.test(&next) {
+						path.push((Play::Idle, next));
+					}
+				},
+				Play::MoveLeft => {
+					path.last_mut().unwrap().0 = Play::MoveRight;
+					let next = player.move_right();
+					if !visit(next) && !well.test(&next) {
+						path.push((Play::Idle, next));
+					}
+				},
+				Play::MoveRight => {
+					path.last_mut().unwrap().0 = Play::RotateCW;
+					let next = player.rotate_cw();
+					if !visit(next) && !well.test(&next) {
+						path.push((Play::Idle, next));
+					}
+				},
+				Play::RotateCW => {
+					path.last_mut().unwrap().0 = Play::RotateCCW;
+					let next = player.rotate_ccw();
+					if !visit(next) && !well.test(&next) {
+						path.push((Play::Idle, next));
+					}
+				},
+				Play::RotateCCW => {
+					// Exhausted all possible moves, back one up and try again
+					path.pop();
+				},
+				_ => unreachable!(),
 			}
 		}
-		PlayI {
-			x: best_x,
-			rot: best_rot,
-			score: best_score,
-		}
+		best
 	}
 	/// Brute force the worst piece for the given well and weights.
 	pub fn worst_piece(weights: &Weights, well: &Well) -> Piece {
@@ -187,101 +240,6 @@ impl PlayI {
 				(good_piece, good_score)
 			}
 		}).0
-	}
-	fn path(weights: &Weights, well: &Well, player: Player) -> (f64, Vec<Play>) {
-		const STRIDE: usize = (MAX_WIDTH + 3) * 4;
-		const SIZE: usize = STRIDE * (MAX_HEIGHT + 4);
-		type Visited = [bool; SIZE];
-		let mut visited = [false; SIZE];
-		let mut path: Vec<(Play, Player)> = Vec::new();
-		path.push((Play::SoftDrop, player));
-		let mut best_score = f64::NEG_INFINITY;
-		let mut best_play = Vec::new();
-		// Depth first floodfill
-		while let Some((play, player)) = path.last().cloned() {
-			match play {
-				Play::Idle => {
-					path.pop();
-				},
-				Play::SoftDrop => {
-					path.last_mut().unwrap().0 = Play::MoveLeft;
-					let next = player.move_down();
-					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
-					if !visited[i] {
-						visited[i] = true;
-						if !well.test(&next) {
-							path.push((Play::SoftDrop, next));
-						}
-						else {
-							let mut well = well.clone();
-							well.etch(&player);
-							let score = weights.eval(&well);
-							if score > best_score {
-								best_score = score;
-								best_play.clear();
-								best_play.extend(path.iter().map(|&(play, _)| {
-									match play {
-										Play::MoveLeft => Play::SoftDrop,
-										Play::MoveRight => Play::MoveLeft,
-										Play::RotateCW => Play::MoveRight,
-										Play::RotateCCW => Play::RotateCW,
-										Play::SoftDrop => Play::SoftDrop,
-										Play::Idle => Play::RotateCCW,
-										_ => unreachable!(),
-									}
-								}));
-							}
-						}
-					}
-				},
-				Play::MoveLeft => {
-					path.last_mut().unwrap().0 = Play::MoveRight;
-					let next = player.move_left();
-					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
-					if !visited[i] {
-						visited[i] = true;
-						if !well.test(&next) {
-							path.push((Play::SoftDrop, next));
-						}
-					}
-				},
-				Play::MoveRight => {
-					path.last_mut().unwrap().0 = Play::RotateCW;
-					let next = player.move_right();
-					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
-					if !visited[i] {
-						visited[i] = true;
-						if !well.test(&next) {
-							path.push((Play::SoftDrop, next));
-						}
-					}
-				},
-				Play::RotateCW => {
-					path.last_mut().unwrap().0 = Play::RotateCCW;
-					let next = player.rotate_cw();
-					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
-					if !visited[i] {
-						visited[i] = true;
-						if !well.test(&next) {
-							path.push((Play::SoftDrop, next));
-						}
-					}
-				},
-				Play::RotateCCW => {
-					path.last_mut().unwrap().0 = Play::Idle;
-					let next = player.rotate_ccw();
-					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
-					if !visited[i] {
-						visited[i] = true;
-						if !well.test(&next) {
-							path.push((Play::SoftDrop, next));
-						}
-					}
-				},
-				_ => unreachable!(),
-			}
-		}
-		(best_score, best_play)
 	}
 	fn piece(weights: &Weights, well: &Well, piece: Piece) -> f64 {
 		// Recursive floodfill to find all the playable states
@@ -330,24 +288,11 @@ impl PlayI {
 		let start = Player::new(piece, Rot::Zero, Point::new(well.width() / 2 - 2, well.height() + 3));
 		rec(&mut visited, weights, well, start)
 	}
-	pub fn play(&self, state: &State) -> Play {
-		state.player().map(|player| {
-			if self.rot != player.rot {
-				Play::RotateCW
-			}
-			else if self.x < player.pt.x {
-				Play::MoveLeft
-			}
-			else if self.x > player.pt.x {
-				Play::MoveRight
-			}
-			else {
-				Play::HardDrop
-			}
-		}).unwrap_or(Play::Idle)
-	}
 }
 
+#[cfg(test)]
+mod tests {
+use super::*;
 #[test]
 fn tdd() {
 	let well = Well::from_data(10, &[
@@ -367,7 +312,7 @@ fn tdd() {
 }
 
 #[test]
-fn path() {
+fn play() {
 	let well = Well::from_data(10, &[
 		0b0000000000,
 		0b0000000000,
@@ -376,7 +321,9 @@ fn path() {
 		0b1100110000,
 		0b1100111111,
 	]);
-	let path = PlayI::path(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
-	println!("{:#?}", path);
-	panic!("catch");
+	let bot = PlayI::play(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
+	use Play::*;
+	println!("{:#?}", bot);
+	assert_eq!(&[SoftDrop, SoftDrop, MoveLeft, MoveLeft, MoveLeft, SoftDrop, SoftDrop, SoftDrop], &*bot.play);
+}
 }
