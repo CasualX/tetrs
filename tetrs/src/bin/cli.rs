@@ -46,21 +46,24 @@ fn input() -> Input {
 
 fn bot(state: &mut tetrs::State) -> bool {
 	let weights = tetrs::Weights::new();
-	let bot = tetrs::PlayI::best(&weights, state.well(), state.player().unwrap().piece);
-	loop {
-		let success = match bot.play(state) {
-			tetrs::Play::Idle => return true,
-			tetrs::Play::MoveLeft => state.move_left(),
-			tetrs::Play::MoveRight => state.move_right(),
-			tetrs::Play::RotateCW => state.rotate_cw(),
-			tetrs::Play::RotateCCW => state.rotate_ccw(),
-			tetrs::Play::SoftDrop => state.soft_drop(),
-			tetrs::Play::HardDrop => state.hard_drop(),
+	let bot = tetrs::PlayI::play(&weights, state.well(), *state.player().unwrap());
+	let mut result = true;
+	for play in bot.play {
+		use tetrs::Play;
+		result &= match play {
+			Play::MoveLeft => state.move_left(),
+			Play::MoveRight => state.move_right(),
+			Play::RotateCW => state.rotate_cw(),
+			Play::RotateCCW => state.rotate_ccw(),
+			Play::SoftDrop => state.soft_drop(),
+			Play::HardDrop => state.hard_drop(),
+			Play::Idle => true,
 		};
-		if !success {
-			return state.hard_drop();
+		if !result {
+			break;
 		}
 	}
+	result
 }
 
 static TILESET: [char; 32] = [
@@ -88,7 +91,7 @@ fn draw(scene: &tetrs::Scene) {
 	print!("+\n");
 }
 
-const HATETRIS: bool = true;
+const HATETRIS: bool = false;
 
 const WELCOME_MESSAGE: &'static str = "
 Welcome to Adventure Tetrs!

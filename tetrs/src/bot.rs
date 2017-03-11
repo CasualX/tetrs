@@ -105,6 +105,7 @@ impl Weights {
 
 /// Player move.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u8)]
 pub enum Play {
 	Idle,
 	MoveLeft,
@@ -187,59 +188,100 @@ impl PlayI {
 			}
 		}).0
 	}
-	fn path(weights: &Weights, well: &Well, player: Player) -> Vec<Play> {
+	fn path(weights: &Weights, well: &Well, player: Player) -> (f64, Vec<Play>) {
 		const STRIDE: usize = (MAX_WIDTH + 3) * 4;
 		const SIZE: usize = STRIDE * (MAX_HEIGHT + 4);
 		type Visited = [bool; SIZE];
 		let mut visited = [false; SIZE];
-
-		struct Iter {
-			next: Play,
-			rot: Rot,
-			pt: Point,
-		}
-		let mut path: Vec<Iter> = Vec::new();
-		path.push(Iter {
-			next: Play::MoveLeft,
-			rot: player.rot,
-			pt: player.pt,
-		});
+		let mut path: Vec<(Play, Player)> = Vec::new();
+		path.push((Play::SoftDrop, player));
+		let mut best_score = f64::NEG_INFINITY;
+		let mut best_play = Vec::new();
 		// Depth first floodfill
-		while let Some(player) = path.last().cloned() {
-			if player.next == Play::Idle {
-				path.pop();
-				continue;
+		while let Some((play, player)) = path.last().cloned() {
+			match play {
+				Play::Idle => {
+					path.pop();
+				},
+				Play::SoftDrop => {
+					path.last_mut().unwrap().0 = Play::MoveLeft;
+					let next = player.move_down();
+					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+					if !visited[i] {
+						visited[i] = true;
+						if !well.test(&next) {
+							path.push((Play::SoftDrop, next));
+						}
+						else {
+							let mut well = well.clone();
+							well.etch(&player);
+							let score = weights.eval(&well);
+							if score > best_score {
+								best_score = score;
+								best_play.clear();
+								best_play.extend(path.iter().map(|&(play, _)| {
+									match play {
+										Play::MoveLeft => Play::SoftDrop,
+										Play::MoveRight => Play::MoveLeft,
+										Play::RotateCW => Play::MoveRight,
+										Play::RotateCCW => Play::RotateCW,
+										Play::SoftDrop => Play::SoftDrop,
+										Play::Idle => Play::RotateCCW,
+										_ => unreachable!(),
+									}
+								}));
+							}
+						}
+					}
+				},
+				Play::MoveLeft => {
+					path.last_mut().unwrap().0 = Play::MoveRight;
+					let next = player.move_left();
+					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+					if !visited[i] {
+						visited[i] = true;
+						if !well.test(&next) {
+							path.push((Play::SoftDrop, next));
+						}
+					}
+				},
+				Play::MoveRight => {
+					path.last_mut().unwrap().0 = Play::RotateCW;
+					let next = player.move_right();
+					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+					if !visited[i] {
+						visited[i] = true;
+						if !well.test(&next) {
+							path.push((Play::SoftDrop, next));
+						}
+					}
+				},
+				Play::RotateCW => {
+					path.last_mut().unwrap().0 = Play::RotateCCW;
+					let next = player.rotate_cw();
+					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+					if !visited[i] {
+						visited[i] = true;
+						if !well.test(&next) {
+							path.push((Play::SoftDrop, next));
+						}
+					}
+				},
+				Play::RotateCCW => {
+					path.last_mut().unwrap().0 = Play::Idle;
+					let next = player.rotate_ccw();
+					let i = (next.pt.y as i32 * STRIDE as i32 + (next.pt.x as i32 + 3) * 4 + next.rot as u8 as i32) as usize;
+					if !visited[i] {
+						visited[i] = true;
+						if !well.test(&next) {
+							path.push((Play::SoftDrop, next));
+						}
+					}
+				},
+				_ => unreachable!(),
 			}
-			// Check if the current position has been visited
-			let i = (player.pt.y as i32 * STRIDE as i32 + (player.pt.x as i32 + 3) * 4 + player.rot as u8 as i32) as usize;
-			// println!("player:{:?} STRIDE:{}", player, STRIDE);
-			if visited[i] {
-				return f64::NEG_INFINITY;
-			}
-			visited[i] = true;
-			// Test if this is a valid move
-			// FIXME! Does not evaluate wall-kicks!
-			if well.test(&player) {
-				return f64::NEG_INFINITY;
-			}
-			// Try all possible moves from this location
-			let cw = rec(visited, weights, well, player.rotate_cw());
-			let ccw = rec(visited, weights, well, player.rotate_ccw());
-			let left = rec(visited, weights, well, player.move_left());
-			let right = rec(visited, weights, well, player.move_right());
-			// Finally try moving one down, and eval well
-			let player_down = if well.test(&player.move_down()) {
-				let mut well = well.clone();
-				well.etch(&player);
-				weights.eval(&well)
-			}
-			else {
-				rec(visited, weights, well, player.move_down())
-			};
-			// Brute force for the highest valued placement
-			cw.max(ccw).max(left).max(right).max(player_down)
 		}
-		unimplemented!()
+		(best_score, best_play)
 	}
 	fn piece(weights: &Weights, well: &Well, piece: Piece) -> f64 {
 		// Recursive floodfill to find all the playable states
@@ -322,4 +364,19 @@ fn tdd() {
 	assert_eq!(2, holes_sum);
 	assert_eq!(6, bumpiness);
 	assert_eq!(1, stacks);
+}
+
+#[test]
+fn path() {
+	let well = Well::from_data(10, &[
+		0b0000000000,
+		0b0000000000,
+		0b0000000000,
+		0b0000000000,
+		0b1100110000,
+		0b1100111111,
+	]);
+	let path = PlayI::path(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
+	println!("{:#?}", path);
+	panic!("catch");
 }
