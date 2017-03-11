@@ -79,7 +79,7 @@ impl State {
 	pub fn rotate_cw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_cw();
-		if !self.well.test(next) || self.wall_kick(&mut next, Rot::cw) {
+		if !self.well.test(next) || !self.well.test_wall_kick(&mut next) {
 			self.player = Some(next);
 			true
 		}
@@ -95,36 +95,13 @@ impl State {
 	pub fn rotate_ccw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_ccw();
-		if !self.well.test(next) || self.wall_kick(&mut next, Rot::ccw) {
+		if !self.well.test(next) || !self.well.test_wall_kick(&mut next) {
 			self.player = Some(next);
 			true
 		}
 		else {
 			false
 		}
-	}
-	fn wall_kick<F>(&self, player: &mut Player, mut f: F) -> bool where F: FnMut(Rot) -> Rot {
-		for _ in 0..3 {
-			player.pt.x -= 1;
-			if !self.well.test(*player) {
-				return true;
-			}
-			player.pt.x += 2;
-			if !self.well.test(*player) {
-				return true;
-			}
-			player.pt.x -= 3;
-			if !self.well.test(*player) {
-				return true;
-			}
-			player.pt.x += 4;
-			if !self.well.test(*player) {
-				return true;
-			}
-			player.pt.x -= 2;
-			player.rot = f(player.rot);
-		}
-		return false;
 	}
 	/// Drops the player down one block.
 	///

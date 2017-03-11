@@ -145,6 +145,26 @@ impl Well {
 		}
 		return false;
 	}
+	pub fn test_wall_kick(&self, player: &mut Player) -> bool {
+		player.pt.x -= 1;
+		if !self.test(*player) {
+			return false;
+		}
+		player.pt.x += 2;
+		if !self.test(*player) {
+			return false;
+		}
+		player.pt.x -= 3;
+		if !self.test(*player) {
+			return false;
+		}
+		player.pt.x += 4;
+		if !self.test(*player) {
+			return false;
+		}
+		player.pt.x -= 2;
+		return true;
+	}
 	/// Etch the player into the field.
 	pub fn etch(&mut self, player: Player) {
 		// Grab the mesh for this rotation

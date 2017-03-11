@@ -194,15 +194,15 @@ impl PlayI {
 				},
 				Play::MoveRight => {
 					path.last_mut().unwrap().0 = Play::RotateCW;
-					let next = player.rotate_cw();
-					if !visit(next) && !well.test(next) {
+					let mut next = player.rotate_cw();
+					if !visit(next) && (!well.test(next) || !well.test_wall_kick(&mut next)) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::RotateCW => {
 					path.last_mut().unwrap().0 = Play::RotateCCW;
-					let next = player.rotate_ccw();
-					if !visit(next) && !well.test(next) {
+					let mut next = player.rotate_ccw();
+					if !visit(next) && (!well.test(next) || !well.test_wall_kick(&mut next)) {
 						path.push((Play::Idle, next));
 					}
 				},

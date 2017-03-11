@@ -47,6 +47,10 @@ fn input() -> Input {
 fn bot(state: &mut tetrs::State) -> bool {
 	let weights = tetrs::Weights::new();
 	let bot = tetrs::PlayI::play(&weights, state.well(), *state.player().unwrap());
+	if bot.play.len() == 0 {
+		state.hard_drop();
+		return false;
+	}
 	let mut result = true;
 	for play in bot.play {
 		use tetrs::Play;
