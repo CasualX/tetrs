@@ -134,7 +134,7 @@ fn main() {
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
-			let next_piece = tetrs::PlayI::worst_piece(&tetrs::Weights::new(), state.well());
+			let next_piece = tetrs::PlayI::best_piece(&tetrs::Weights::new(), state.well());
 			state.spawn(next_piece);
 		}
 

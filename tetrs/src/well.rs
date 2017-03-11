@@ -5,14 +5,32 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player};
+use ::{Player, Piece};
 
+/// Maximum well height.
+///
+/// If this is changed, don't forget to update the documentation for `Well::new`.
+///
+/// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
 pub const MAX_HEIGHT: usize = 22;
+/// Maxium well width.
+///
+/// If this is changed, don't forget to update the documentation for `Well::new`.
+///
+/// Note that the `Line` type should be updated to be able to hold this number of bits (as a bit mask).
 pub const MAX_WIDTH: usize = 16;
 
+/// A line is represented by a bit mask in 'reversed' order.
+///
+/// The block with position `x` is represented by the bit `1 << x` (this is mirrored from its binary form when printed).
+///
+/// TODO! This mirroring causes a lot of conceptual problems, consider changing it.
 pub type Line = u16;
 
-#[derive(Clone, Debug)]
+/// Playing field.
+///
+/// Represents the tetris playing field efficiently using bit masks without memory allocations.
+#[derive(Copy, Clone, Debug)]
 pub struct Well {
 	width: i8,
 	height: i8,
@@ -32,39 +50,19 @@ impl Well {
 		assert!(width >= 4 && width <= MAX_WIDTH as i8, "width must be ∈ [4, {}]", MAX_WIDTH);
 		assert!(height >= 4 && height <= MAX_HEIGHT as i8, "height must be ∈ [4, {}]", MAX_HEIGHT);
 		Well {
-			width: width as i8,
-			height: height as i8,
+			width: width,
+			height: height,
 			_pad: 0,
 			field: [0; MAX_HEIGHT],
 		}
 	}
 	/// Creates a new well with the given data.
 	///
+	/// Note that the input lines are in 'visual' order, they will be vertically flipped and horizontally mirrored for internal storage.
+	///
 	/// # Panics
 	///
 	/// No minos may be found outside the well's width.
-	///
-	/// # Examples
-	///
-	/// ```
-	/// # use tetrs::Well;
-	/// let well = Well::from_data(10, &[
-	/// 	0b0000110000,
-	/// 	0b0111111001,
-	/// 	0b0110111111,
-	/// 	0b1111111111,
-	/// 	0b1110111111,
-	/// 	0b1111111111,
-	/// ]);
-	/// assert_eq!(format!("{}", well), "\
-	/// 	|    □□    |\n\
-	/// 	| □□□□□□  □|\n\
-	/// 	| □□ □□□□□□|\n\
-	/// 	|□□□□□□□□□□|\n\
-	/// 	|□□□ □□□□□□|\n\
-	/// 	|□□□□□□□□□□|\n\
-	/// 	+----------+");
-	/// ```
 	pub fn from_data(width: i8, lines: &[Line]) -> Well {
 		let mut well = Well::new(width, lines.len() as i8);
 		for (lhs, &rhs) in Iterator::zip(well.field[..lines.len()].iter_mut(), lines.iter().rev()) {
@@ -88,16 +86,15 @@ impl Well {
 		self.height
 	}
 	/// Returns the field as lines.
+	///
+	/// Note that the bottom row sits at index 0 going up the field as the index increases.
 	pub fn lines(&self) -> &[Line] {
 		&self.field[..self.height as usize]
-	}
-	pub fn lines_mut(&mut self) -> &mut [Line] {
-		&mut self.field[..self.height as usize]
 	}
 	/// Hit tests the player against the field.
 	///
 	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
-	pub fn test(&self, player: Player) -> bool {
+	pub fn test_player(&self, player: Player) -> bool {
 		// Early reject out of bounds
 		if player.pt.x < (0 - 4) || player.pt.x >= self.width || player.pt.y < 0 {
 			return true;
@@ -117,6 +114,7 @@ impl Well {
 			self.line_mask() >> player.pt.x as usize
 		};
 
+		// The compiler actually unrolls and splits this loop, pretty slick :)
 		for y in 0..4 {
 			// Check if part is sticking out of a wall
 			if (mesh[y as usize] as Line) & !line_mask != 0 {
@@ -145,25 +143,49 @@ impl Well {
 		}
 		return false;
 	}
+	/// Hit test the player with wall kicks.
+	///
+	/// If a valid wall kick is found, the input player is modified with the new position and `true` is returned, `false` otherwise.
+	///
+	/// The actual wall kicks allowed don't follow any advanced rules, it just offsets the position and stops when a valid position is found.
+	///
+	/// The positions tested are `x - 1`, `x + 1`, `x - 2` and `x + 2` (the latter two are only for the I piece).
+	///
+	/// TODO! Figure out the flexible SRS wall kick system.
 	pub fn test_wall_kick(&self, player: &mut Player) -> bool {
 		player.pt.x -= 1;
-		if !self.test(*player) {
+		if !self.test_player(*player) {
 			return false;
 		}
 		player.pt.x += 2;
-		if !self.test(*player) {
+		if !self.test_player(*player) {
 			return false;
 		}
-		player.pt.x -= 3;
-		if !self.test(*player) {
-			return false;
+		if player.piece == Piece::I {
+			player.pt.x -= 3;
+			if !self.test_player(*player) {
+				return false;
+			}
+			player.pt.x += 4;
+			if !self.test_player(*player) {
+				return false;
+			}
+			player.pt.x -= 2;
 		}
-		player.pt.x += 4;
-		if !self.test(*player) {
-			return false;
+		else {
+			player.pt.x -= 1;
 		}
-		player.pt.x -= 2;
 		return true;
+	}
+	/// Traces a player down and returns where it will come to rest.
+	pub fn trace_down(&self, mut player: Player) -> Player {
+		loop {
+			let next = player.move_down();
+			if self.test_player(next) {
+				return player;
+			}
+			player = next;
+		}
 	}
 	/// Etch the player into the field.
 	pub fn etch(&mut self, player: Player) {
@@ -175,13 +197,13 @@ impl Well {
 			let row = player.pt.y - y;
 			if row >= 0 && row < self.height {
 				// Render the mesh for this line
-				let cg_line = if player.pt.x < 0 {
+				let line_mask = if player.pt.x < 0 {
 					(mesh[y as usize] as Line) >> (-player.pt.x) as usize
 				}
 				else {
 					(mesh[y as usize] as Line) << player.pt.x as usize
 				};
-				self.field[row as usize] |= cg_line;
+				self.field[row as usize] |= line_mask;
 			}
 		}
 	}
@@ -216,31 +238,7 @@ impl Well {
 	/// Inserts a line.
 	///
 	/// The existing lines are shifted up and the top line that got bumped out is returned.
-	/*
-	///
-	/// # Examples
-	///
-	/// ```
-	/// # use tetrs::Well;
-	///
-	/// let mut well = Well::from_data(10, &[
-	/// 	0b0000100000,
-	/// 	0b0110110001,
-	/// 	0b1100100001,
-	/// 	0b1111100011,
-	/// ]);
-	///
-	/// assert_eq!(0b0000100000, well.insert_line(1, 0b1111000011));
-	///
-	/// assert_eq!(well.lines(), &[
-	/// 	0b0110110001,
-	/// 	0b1100100001,
-	/// 	0b1111000011,
-	/// 	0b1111100011,
-	/// ]);
-	/// ```
-	*/
-	pub fn insert_line(&mut self, row: i32, line: Line) -> Line {
+	pub fn insert_line(&mut self, row: i8, line: Line) -> Line {
 		let old = self.field[self.height() as usize - 1];
 		for i in (row as usize..self.height() as usize - 1).rev() {
 			self.field[i + 1] = self.field[i];
@@ -250,6 +248,7 @@ impl Well {
 	}
 }
 
+/// Errors when parsing a well from text.
 pub enum ParseWellError {
 	/// The string is empty.
 	Empty,
@@ -381,24 +380,29 @@ mod tests {
 	}
 
 	#[test]
-	fn hit_test() {
+	fn test_player() {
 		let well = well();
 		// Within the field bounds
-		assert!(!well.test(Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
-		assert!(!well.test(Player::new(Piece::J, Rot::Three, Point::new(5, 2))));
+		assert!(!well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
+		assert!(!well.test_player(Player::new(Piece::J, Rot::Three, Point::new(5, 2))));
 		// Clip left wall
-		assert!(well.test(Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
+		assert!(well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
 		// Clip with existing pieces
-		assert!(well.test(Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
+		assert!(well.test_player(Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
 		// Clip right wall
-		assert!(well.test(Player::new(Piece::O, Rot::One, Point::new(9, 1))));
+		assert!(well.test_player(Player::new(Piece::O, Rot::One, Point::new(9, 1))));
 		// Clip the bottom
-		assert!(well.test(Player::new(Piece::J, Rot::Three, Point::new(5, 1))));
+		assert!(well.test_player(Player::new(Piece::J, Rot::Three, Point::new(5, 1))));
 	}
 
 	#[test]
-	fn remove_line() {
+	fn lines() {
 		let mut well = well();
+
+		let base1 = well.line(0);
+		let top1 = well.line(3);
+		assert_eq!(0b1000111011, base1);
+		assert_eq!(0b1000000000, top1);
 
 		let removed1 = well.remove_line(3);
 		assert_eq!(0b1000000000, removed1);
@@ -414,6 +418,30 @@ mod tests {
 		            |          |\n\
 		            |         □|\n\
 		            |□□   □   □|\n\
+		            +----------+", format!("{}", well));
+
+		let insert1 = well.insert_line(0, removed1);
+		assert_eq!(0b0000000000, insert1);
+		assert_eq!("|          |\n\
+		            |         □|\n\
+		            |□□   □   □|\n\
+		            |         □|\n\
+		            +----------+", format!("{}", well));
+
+		let insert2 = well.insert_line(1, removed2);
+		assert_eq!(0b0000000000, insert2);
+		assert_eq!("|         □|\n\
+		            |□□   □   □|\n\
+		            |□□ □□□   □|\n\
+		            |         □|\n\
+		            +----------+", format!("{}", well));
+
+		let erased1 = well.set_line(0, 0b1000001111);
+		assert_eq!(0b1000000000, erased1);
+		assert_eq!("|         □|\n\
+		            |□□   □   □|\n\
+		            |□□ □□□   □|\n\
+		            |□□□□     □|\n\
 		            +----------+", format!("{}", well));
 	}
 }

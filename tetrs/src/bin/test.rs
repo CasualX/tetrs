@@ -13,6 +13,6 @@ fn main() {
 		0b1111111111,
 	]);
 	extern_tag("extern_tag1");
-	well.test(tetrs::Player::new(tetrs::Piece::O, tetrs::Rot::Zero, tetrs::Point::new(2, 3)));
+	well.test_player(tetrs::Player::new(tetrs::Piece::O, tetrs::Rot::Zero, tetrs::Point::new(2, 3)));
 	extern_tag("extern_tag2");
 }

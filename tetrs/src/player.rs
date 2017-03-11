@@ -1,6 +1,7 @@
 
 use ::{Piece, Rot, Point};
 
+/// The player.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Player {
 	pub piece: Piece,
@@ -17,7 +18,7 @@ impl Player {
 			pt: pt,
 		}
 	}
-	/// Moves the player left.
+	/// Returns the player moved left one step.
 	pub fn move_left(self) -> Player {
 		Player {
 			piece: self.piece,
@@ -28,7 +29,7 @@ impl Player {
 			},
 		}
 	}
-	/// Moves the player right.
+	/// Returns the player moved right one step.
 	pub fn move_right(self) -> Player {
 		Player {
 			piece: self.piece,
@@ -39,7 +40,7 @@ impl Player {
 			},
 		}
 	}
-	/// Drops the player down.
+	/// Returns the player moved down one step.
 	pub fn move_down(self) -> Player {
 		Player {
 			piece: self.piece,
@@ -50,7 +51,7 @@ impl Player {
 			},
 		}
 	}
-	/// Rotates the player clockwise.
+	/// Returns the player rotated clockwise.
 	pub fn rotate_cw(self) -> Player {
 		Player {
 			piece: self.piece,
@@ -58,7 +59,7 @@ impl Player {
 			pt: self.pt,
 		}
 	}
-	/// Rotates the player counter-clockwise.
+	/// Returns the player rotated counter-clockwise.
 	pub fn rotate_ccw(self) -> Player {
 		Player {
 			piece: self.piece,

@@ -6,6 +6,7 @@ use ::std::mem;
 
 use ::Piece;
 
+/// The tile type.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u8)]
 pub enum TileTy {
@@ -15,7 +16,7 @@ pub enum TileTy {
 	Ghost,
 	/// This tile is a block in the playing field.
 	Field,
-	/// This tile is a background block.
+	/// This tile is a background graphic.
 	Background,
 }
 

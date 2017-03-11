@@ -36,7 +36,8 @@ impl Scene {
 	pub fn line(&self, row: i8) -> &[Tile] {
 		&self.tiles[(self.height - 1 - row) as usize][..self.width as usize]
 	}
-	pub fn render(&mut self, player: Player, tile_ty: TileTy) {
+	/// Draws the player and its ghost into the scene.
+	pub fn draw(&mut self, player: Player, tile_ty: TileTy) {
 		// Get the unperturbed mesh
 		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
 		let mut part_id = 0;
@@ -60,9 +61,28 @@ impl Scene {
 	pub fn remove_line(&mut self, row: i8) {
 		let top = (self.height - 2) as usize;
 		let _ = self.tiles[row as usize..top];
-		for i in row as usize..top - 1 {
+		for i in row as usize..top {
 			self.tiles[i] = self.tiles[i + 1];
 		}
 		self.tiles[top] = [TILE_BG0; MAX_WIDTH];
+		self.fix_bg();
+	}
+	fn fix_bg(&mut self) {
+		let height = self.height as usize;
+		for tile in self.tiles[height - 1].iter_mut() {
+			if tile.tile_ty() == TileTy::Background {
+				*tile = TILE_BG2;
+			}
+		}
+		for tile in self.tiles[height - 2].iter_mut() {
+			if tile.tile_ty() == TileTy::Background {
+				*tile = TILE_BG1;
+			}
+		}
+		for tile in self.tiles[height - 3].iter_mut() {
+			if tile.tile_ty() == TileTy::Background {
+				*tile = TILE_BG0;
+			}
+		}
 	}
 }

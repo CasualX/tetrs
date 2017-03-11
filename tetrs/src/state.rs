@@ -1,5 +1,3 @@
-/*!
-*/
 
 use ::{Player, Well, Piece, Rot, Point, Scene, TileTy};
 
@@ -49,7 +47,7 @@ impl State {
 	pub fn move_left(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_left();
-		if !self.well.test(next) {
+		if !self.well.test_player(next) {
 			self.player = Some(next);
 			true
 		}
@@ -63,7 +61,7 @@ impl State {
 	pub fn move_right(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_right();
-		if !self.well.test(next) {
+		if !self.well.test_player(next) {
 			self.player = Some(next);
 			true
 		}
@@ -79,7 +77,7 @@ impl State {
 	pub fn rotate_cw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_cw();
-		if !self.well.test(next) || !self.well.test_wall_kick(&mut next) {
+		if !self.well.test_player(next) || !self.well.test_wall_kick(&mut next) {
 			self.player = Some(next);
 			true
 		}
@@ -95,7 +93,7 @@ impl State {
 	pub fn rotate_ccw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let mut next = player.rotate_ccw();
-		if !self.well.test(next) || !self.well.test_wall_kick(&mut next) {
+		if !self.well.test_player(next) || !self.well.test_wall_kick(&mut next) {
 			self.player = Some(next);
 			true
 		}
@@ -109,7 +107,7 @@ impl State {
 	pub fn soft_drop(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_down();
-		if !self.well.test(next) {
+		if !self.well.test_player(next) {
 			self.player = Some(next);
 			true
 		}
@@ -123,15 +121,13 @@ impl State {
 	///
 	/// Returns `false` if no player.
 	pub fn hard_drop(&mut self) -> bool {
-		let mut player = match self.player { Some(pl) => pl, None => return false };
-		loop {
-			let next = player.move_down();
-			if self.well.test(next) {
-				self.player = Some(player);
-				self.lock();
-				return true;
-			}
-			player = next;
+		if let Some(player) = self.player {
+			self.player = Some(self.well.trace_down(player));
+			self.lock();
+			true
+		}
+		else {
+			false
 		}
 	}
 	/// Applies gravity to the player.
@@ -163,7 +159,7 @@ impl State {
 	pub fn lock(&mut self) {
 		if let Some(pl) = self.player {
 			self.well.etch(pl);
-			self.scene.render(pl, TileTy::Field);
+			self.scene.draw(pl, TileTy::Field);
 			self.player = None;
 		}
 	}
@@ -181,9 +177,9 @@ impl State {
 				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i8,
 			},
 		});
-		self.well.test(self.player.unwrap())
+		self.well.test_player(self.player.unwrap())
 	}
-	/// It is game over when the well extends to the top 2 lines.
+	/// Tests if the well extends to the top 2 lines.
 	pub fn is_game_over(&self) -> bool {
 		let lines = self.well.lines();
 		let height = self.well.height() as usize;
@@ -192,18 +188,11 @@ impl State {
 	pub fn scene(&self) -> Scene {
 		let mut scene = self.scene.clone();
 		if let Some(&player) = self.player() {
-			// Drop the player down to visualize its ghost
-			let mut ghost = player;
-			loop {
-				let next = ghost.move_down();
-				if self.well.test(next) {
-					scene.render(ghost, TileTy::Ghost);
-					break;
-				}
-				ghost = next;
-			}
-			// Render the player
-			scene.render(player, TileTy::Player);
+			// Draw the ghost where the player will fall
+			let ghost = self.well.trace_down(player);
+			scene.draw(ghost, TileTy::Ghost);
+			// Draw the player
+			scene.draw(player, TileTy::Player);
 		}
 		scene
 	}
