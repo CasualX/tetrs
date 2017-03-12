@@ -7,3 +7,4 @@ build = "build.rs"
 [dependencies]
 tetrs = { path = "../tetrs" }
 sdl2 = "0.29"
+rand = "0.3"

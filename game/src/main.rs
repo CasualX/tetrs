@@ -3,6 +3,9 @@
 
 extern crate tetrs;
 extern crate sdl2;
+extern crate rand;
+
+use rand::Rng;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -131,11 +134,24 @@ fn main() {
 
 	// Tetris game state
 	let mut state = tetrs::State::new(10, 22);
+	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new() };
+	let mut play_i = 0;
+	let weights = tetrs::Weights::new();
+	let mut rng = rand::thread_rng();
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
-			let next_piece = tetrs::PlayI::best_piece(&tetrs::Weights::new(), state.well());
-			state.spawn(next_piece);
+			let next_piece = if rng.gen() && rng.gen() && rng.gen() {
+				tetrs::PlayI::best_piece(&weights, state.well())
+			}
+			else {
+				let r: u8 = rng.gen();
+				unsafe { std::mem::transmute(r % 7) }
+			};
+			if !state.spawn(next_piece) {
+				play = tetrs::PlayI::play(&weights, state.well(), *state.player().unwrap());
+				play_i = 0;
+			}
 		}
 
 		for e in events.poll_iter() {
@@ -169,6 +185,19 @@ fn main() {
 			};
 		}
 
+		if play_i < play.play.len() {
+			match play.play[play_i] {
+				tetrs::Play::Idle => (),
+				tetrs::Play::MoveLeft => { state.move_left(); },
+				tetrs::Play::MoveRight => { state.move_right(); },
+				tetrs::Play::RotateCW => { state.rotate_cw(); },
+				tetrs::Play::RotateCCW => { state.rotate_ccw(); },
+				tetrs::Play::SoftDrop => { state.soft_drop(); },
+				tetrs::Play::HardDrop => { state.hard_drop(); },
+			}
+			play_i += 1;
+		}
+
 		state.clear_lines(|_| ());
 
 		// Render a fully black window
@@ -179,6 +208,6 @@ fn main() {
 
 		renderer.present();
 
-		thread::sleep(Duration::from_millis(1));
+		thread::sleep(Duration::from_millis(25));
     }
 }

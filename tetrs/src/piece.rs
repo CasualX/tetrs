@@ -101,17 +101,3 @@ static DATA: [Mesh; 7] = [
 		____ ____ ____ ____
 	]},
 ];
-
-#[cfg(test)]
-mod tests {
-	// use super::*;
-
-	#[test]
-	fn render() {
-		// let mask1 = Piece::T.render(Rot::One, 1);
-		// let mask2 = Piece::I.render(Rot::Three, 0);
-		// let mask3 = Piece::S.render(Rot::Two, 2);
-		// let mask4 = Piece::L.render(Rot::Two, 1);
-		// assert_eq!([0b0000, 0b0100, 0b0110, 0b0100], mask1);
-	}
-}
