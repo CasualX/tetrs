@@ -1,6 +1,14 @@
+/*!
+Tetris game engine.
+*/
+
+extern crate rand;
 
 mod bot;
 pub use self::bot::{Weights, PlayI, Play};
+
+mod bag;
+pub use self::bag::{Bag, OfficialBag, BestBag, WorstBag};
 
 mod pt;
 pub use self::pt::Point;

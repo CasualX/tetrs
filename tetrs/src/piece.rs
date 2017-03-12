@@ -1,4 +1,6 @@
 
+use ::std::mem;
+
 /// Represents the shapes of a piece.
 pub struct Mesh {
 	pub data: [[u8; 4]; 4],
@@ -13,6 +15,12 @@ impl Piece {
 	/// Returns the Mesh data for the given piece.
 	pub fn mesh(self) -> &'static Mesh {
 		&DATA[self as u8 as usize]
+	}
+}
+impl ::rand::Rand for Piece {
+	fn rand<R: ::rand::Rng>(rng: &mut R) -> Piece {
+		let entropy = rng.next_u32();
+		unsafe { mem::transmute((entropy % 7) as u8) }
 	}
 }
 

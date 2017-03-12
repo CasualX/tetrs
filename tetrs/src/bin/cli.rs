@@ -1,7 +1,5 @@
 extern crate tetrs;
-extern crate rand;
 
-use rand::Rng;
 use std::io::prelude::*;
 
 // FIXME! Little hack to clear the screen :)
@@ -95,8 +93,6 @@ fn draw(scene: &tetrs::Scene) {
 	print!("+\n");
 }
 
-const HATETRIS: bool = false;
-
 const WELCOME_MESSAGE: &'static str = "
 Welcome to Adventure Tetrs!
 After the playing field is shown, you will be asked for input.
@@ -127,10 +123,12 @@ fn main() {
 	
 	println!("{}", WELCOME_MESSAGE);
 
+	use tetrs::Bag;
+
 	let mut state = tetrs::State::new(10, 22);
-	let mut next_piece = if HATETRIS { tetrs::Piece::S } else { tetrs::Piece::L };
+	let mut bag = tetrs::OfficialBag::default();
+	let mut next_piece = bag.next(state.well()).unwrap();
 	state.spawn(next_piece);
-	let mut rng = rand::thread_rng();
 
 	loop {
 		draw(&state.scene());
@@ -156,13 +154,7 @@ fn main() {
 
 		// Spawn a new piece as needed
 		if state.player().is_none() {
-			next_piece = if HATETRIS {
-				tetrs::PlayI::worst_piece(&tetrs::Weights::new(), state.well())
-			}
-			else {
-				let r: u8 = rng.gen();
-				unsafe { std::mem::transmute(r % 7) }
-			};
+			next_piece = bag.next(state.well()).unwrap();
 			if state.spawn(next_piece) {
 				println!("Game Over!");
 				break;

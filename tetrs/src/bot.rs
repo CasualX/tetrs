@@ -7,6 +7,7 @@ use ::std::f64;
 use ::{Well, Rot, Piece, Player, Point, MAX_WIDTH, MAX_HEIGHT};
 
 /// Weights for evaluating well.
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Weights {
 	/// Factor for the total combined height of all the columns.
 	pub agg_height_f: f64,
@@ -292,38 +293,38 @@ impl PlayI {
 
 #[cfg(test)]
 mod tests {
-use super::*;
-#[test]
-fn tdd() {
-	let well = Well::from_data(10, &[
-		0b0000110000,
-		0b0111111001,
-		0b0110111111,
-		0b1111111111,
-		0b1110111111,
-		0b1111111111,
-	]);
-	let (heights_sum, lines, holes_sum, bumpiness, stacks) = Weights::crunch(&well);
-	assert_eq!(28, heights_sum);
-	assert_eq!(2, lines);
-	assert_eq!(2, holes_sum);
-	assert_eq!(6, bumpiness);
-	assert_eq!(1, stacks);
-}
+	use super::*;
+	#[test]
+	fn tdd() {
+		let well = Well::from_data(10, &[
+			0b0000110000,
+			0b0111111001,
+			0b0110111111,
+			0b1111111111,
+			0b1110111111,
+			0b1111111111,
+		]);
+		let (heights_sum, lines, holes_sum, bumpiness, stacks) = Weights::crunch(&well);
+		assert_eq!(28, heights_sum);
+		assert_eq!(2, lines);
+		assert_eq!(2, holes_sum);
+		assert_eq!(6, bumpiness);
+		assert_eq!(1, stacks);
+	}
 
-#[test]
-fn play() {
-	let well = Well::from_data(10, &[
-		0b0000000000,
-		0b0000000000,
-		0b0000000000,
-		0b0000000000,
-		0b1100110000,
-		0b1100111111,
-	]);
-	let bot = PlayI::play(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
-	use Play::*;
-	println!("{:#?}", bot);
-	assert_eq!(&[SoftDrop, SoftDrop, MoveLeft, MoveLeft, MoveLeft, SoftDrop, SoftDrop, SoftDrop], &*bot.play);
-}
+	#[test]
+	fn play() {
+		let well = Well::from_data(10, &[
+			0b0000000000,
+			0b0000000000,
+			0b0000000000,
+			0b0000000000,
+			0b1100110000,
+			0b1100111111,
+		]);
+		let bot = PlayI::play(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
+		use Play::*;
+		println!("{:#?}", bot);
+		assert_eq!(&[SoftDrop, SoftDrop, MoveLeft, MoveLeft, MoveLeft, SoftDrop, SoftDrop, SoftDrop], &*bot.play);
+	}
 }

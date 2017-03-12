@@ -3,9 +3,6 @@
 
 extern crate tetrs;
 extern crate sdl2;
-extern crate rand;
-
-use rand::Rng;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
@@ -137,17 +134,12 @@ fn main() {
 	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new() };
 	let mut play_i = 0;
 	let weights = tetrs::Weights::new();
-	let mut rng = rand::thread_rng();
+	let mut bag = tetrs::BestBag::new(tetrs::Weights::new());
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
-			let next_piece = if rng.gen() && rng.gen() && rng.gen() {
-				tetrs::PlayI::best_piece(&weights, state.well())
-			}
-			else {
-				let r: u8 = rng.gen();
-				unsafe { std::mem::transmute(r % 7) }
-			};
+			use tetrs::Bag;
+			let next_piece = bag.next(state.well()).unwrap();
 			if !state.spawn(next_piece) {
 				play = tetrs::PlayI::play(&weights, state.well(), *state.player().unwrap());
 				play_i = 0;
