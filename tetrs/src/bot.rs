@@ -20,12 +20,11 @@ pub struct Weights {
 	/// Factor for the number blocks above a hole.
 	pub stacking_f: f64,
 }
-
-impl Weights {
-	/// Returns some nice weights.
-	///
-	/// Gently appropriated from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
-	pub fn new() -> Weights {
+/// Returns some nice weights.
+///
+/// Gently appropriated from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
+impl Default for Weights {
+	fn default() -> Weights {
 		Weights {
 			agg_height_f: -0.510066,
 			complete_lines_f: 0.760666,
@@ -45,7 +44,10 @@ impl Weights {
 			// bumpiness: -0.184483,
 			// walltouch: 6.52,
 		}
+
 	}
+}
+impl Weights {
 	/// Evaluates a well and returns a score.
 	///
 	/// The score is the sum of result of each category multiplied by the appropriated multiplier.
@@ -322,7 +324,7 @@ mod tests {
 			0b1100110000,
 			0b1100111111,
 		]);
-		let bot = PlayI::play(&Weights::new(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
+		let bot = PlayI::play(&Weights::default(), &well, Player::new(Piece::O, Rot::Zero, Point::new(4, 6)));
 		use Play::*;
 		println!("{:#?}", bot);
 		assert_eq!(&[SoftDrop, SoftDrop, MoveLeft, MoveLeft, MoveLeft, SoftDrop, SoftDrop, SoftDrop], &*bot.play);

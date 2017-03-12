@@ -134,7 +134,8 @@ fn main() {
 	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new() };
 	let mut play_i = 0;
 	let weights = tetrs::Weights::new();
-	let mut bag = tetrs::BestBag::new(tetrs::Weights::new());
+	let mut bag = tetrs::OfficialBag::default();
+	// let mut bag = tetrs::WorstBag::new(tetrs::Weights::new());
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
@@ -200,6 +201,6 @@ fn main() {
 
 		renderer.present();
 
-		thread::sleep(Duration::from_millis(25));
+		thread::sleep(Duration::from_millis(1));
     }
 }

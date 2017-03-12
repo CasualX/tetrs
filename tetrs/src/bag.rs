@@ -13,7 +13,12 @@ pub trait Bag {
 	}
 }
 
-/// Official Random Generator shuffling 7 pieces.
+/// Official Random Generator.
+///
+/// Source: http://tetris.wikia.com/wiki/Random_Generator
+///
+/// > The Random Generator generates a sequence of all seven tetrominoes permuted randomly as if they were drawn from a bag.
+/// > Then it deals all seven tetrominoes to the piece sequence before generating another bag.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OfficialBag<R: Rng> {
 	rng: R,
@@ -64,7 +69,7 @@ impl<R: Rng> Bag for OfficialBag<R> {
 }
 
 /// Pieces bag generously giving the best pieces.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BestBag {
 	weights: Weights,
 }
@@ -83,7 +88,7 @@ impl Bag for BestBag {
 }
 
 /// Pieces bag coldly giving the worst pieces.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WorstBag {
 	weights: Weights,
 }
