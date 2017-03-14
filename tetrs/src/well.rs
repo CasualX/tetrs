@@ -248,6 +248,58 @@ impl Well {
 	}
 }
 
+impl Well {
+	pub fn count_blocks(&self) -> u32 {
+		self.lines().iter().map(|&line| line.count_ones()).sum()
+	}
+	/// Flood the well with blocks from the top.
+	///
+	/// Marks all spaces reachable from the pieces spawning area. Used to calculate holes for the AI.
+	pub fn flood_fill(&mut self) {
+		fn rec(well: &mut Well, y: usize, x: Line) {
+			// From the given x, work our way to the left wall
+			let mut left = x;
+			while left > 1 && (well.field[y] & (left >> 1)) != 0 {
+				left >>= 1;
+			}
+			// From the given x, work our way to x = width
+			let mut right = x;
+			let end = 1 << well.width as usize;
+			while right < end && (well.field[y] & (right << 1)) != 0 {
+				right <<= 1;
+			}
+			// Mask the visited blocks
+			let visit_mask = (right << 1).wrapping_sub(1) - (left >> 1);
+			well.field[y] |= visit_mask;
+			// Recursively check upwards again (pretty rare)
+			if well.field[y + 1] & visit_mask != visit_mask {
+				let mut it = left;
+				while it != right {
+					if well.field[y + 1] & it == 0 {
+						rec(well, y + 1, it);
+					}
+					it <<= 1;
+				}
+			}
+			// Recursively check downwards
+			if y > 0 {
+				let mut it = left;
+				while it != right {
+					if well.field[y - 1] & it == 0 {
+						rec(well, y - 1, it);
+					}
+					it <<= 1;
+				}
+			}
+		}
+		// Start by masking the upper line
+		self.field[(self.height - 1) as usize] = self.line_mask();
+		// Scan from the top of the well down
+		let y = self.height - 2;
+		rec(self, y as usize, 1);
+	}
+}
+
 /// Errors when parsing a well from text.
 pub enum ParseWellError {
 	/// The string is empty.
