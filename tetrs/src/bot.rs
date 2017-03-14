@@ -2,7 +2,7 @@
 Simple player bot.
 */
 
-use ::std::f64;
+use ::std::{ops, f64};
 
 use ::{Well, Rot, Piece, Player, Point, MAX_WIDTH, MAX_HEIGHT};
 
@@ -15,6 +15,8 @@ pub struct Weights {
 	pub complete_lines_f: f64,
 	/// Factor for the number of holes in the field.
 	pub holes_f: f64,
+	/// Factor for the number of caves in the field.
+	pub caves_f: f64,
 	/// Factor for the sum of the absolute differences between two adjacent columns.
 	pub bumpiness_f: f64,
 	/// Factor for the number blocks above a hole.
@@ -28,7 +30,8 @@ impl Default for Weights {
 		Weights {
 			agg_height_f: -0.510066,
 			complete_lines_f: 0.760666,
-			holes_f: -0.35663,
+			holes_f: -0.45663,
+			caves_f: -0.25663,
 			bumpiness_f: -0.184483,
 			stacking_f: -0.5,
 
@@ -62,15 +65,16 @@ impl Weights {
 			return f64::NEG_INFINITY;
 		}
 
-		let (agg_height, completed_lines, holes, bumpiness, stacks) = Self::crunch(well);
+		let (agg_height, completed_lines, holes, caves, bumpiness, stacks) = Self::crunch(well);
 		return
 			self.agg_height_f * agg_height as f64 +
 			self.complete_lines_f * completed_lines as f64 +
 			self.holes_f * holes as f64 +
+			self.caves_f * caves as f64 +
 			self.bumpiness_f * bumpiness as f64 +
 			self.stacking_f * stacks as f64;
 	}
-	fn crunch(well: &Well) -> (i32, i32, i32, i32, i32) {
+	fn crunch(well: &Well) -> (i32, i32, i32, i32, i32, i32) {
 		let width = well.width() as usize;
 		let mut heights = [0i32; MAX_WIDTH];
 		let mut holes = [0i32; MAX_WIDTH];
@@ -104,12 +108,13 @@ impl Weights {
 			}
 		}
 
+		let holes_sum = well.count_holes();
 		let height_sum = heights[..width].iter().sum();
-		let holes_sum = holes[..width].iter().sum();
+		let caves_sum = holes[..width].iter().fold(0, ops::Add::add) - holes_sum;
 		let stacks_sum = stacks[..width].iter().sum();
 		let bumpiness = heights[..width].windows(2).map(|window| (window[0] - window[1]).abs()).sum();
 
-		(height_sum, lines, holes_sum, bumpiness, stacks_sum)
+		(height_sum, lines, holes_sum, caves_sum, bumpiness, stacks_sum)
 	}
 }
 

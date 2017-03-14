@@ -30,7 +30,7 @@ pub type Line = u16;
 /// Playing field.
 ///
 /// Represents the tetris playing field efficiently using bit masks without memory allocations.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Well {
 	width: i8,
 	height: i8,
@@ -249,54 +249,61 @@ impl Well {
 }
 
 impl Well {
+	pub fn count_holes(&self) -> i32 {
+		let mut well = *self;
+		well.flood_fill();
+		self.width as i32 * self.height as i32 - self.count_blocks() as i32
+	}
+	/// Returns the number of blocks in the field.
 	pub fn count_blocks(&self) -> u32 {
 		self.lines().iter().map(|&line| line.count_ones()).sum()
 	}
-	/// Flood the well with blocks from the top.
+	/// Flood fills the field.
 	///
-	/// Marks all spaces reachable from the pieces spawning area. Used to calculate holes for the AI.
+	/// The flood starts from the top-center of the field.
 	pub fn flood_fill(&mut self) {
-		fn rec(well: &mut Well, y: usize, x: Line) {
-			// From the given x, work our way to the left wall
-			let mut left = x;
-			while left > 1 && (well.field[y] & (left >> 1)) != 0 {
-				left >>= 1;
-			}
-			// From the given x, work our way to x = width
-			let mut right = x;
-			let end = 1 << well.width as usize;
-			while right < end && (well.field[y] & (right << 1)) != 0 {
-				right <<= 1;
-			}
-			// Mask the visited blocks
-			let visit_mask = (right << 1).wrapping_sub(1) - (left >> 1);
-			well.field[y] |= visit_mask;
-			// Recursively check upwards again (pretty rare)
-			if well.field[y + 1] & visit_mask != visit_mask {
-				let mut it = left;
-				while it != right {
-					if well.field[y + 1] & it == 0 {
-						rec(well, y + 1, it);
-					}
-					it <<= 1;
+		let y = self.height - 1;
+		let x = self.width as usize / 2;
+		self._flood_fill(y as usize, 1 << x);
+	}
+	fn _flood_fill(&mut self, y: usize, x: Line) {
+		// Find the left edge
+		let mut left = x;
+		while left > 1 && self.field[y] & (left >> 1) == 0 {
+			left >>= 1;
+		}
+		let left = left;
+		// Find the right edge (+ 1)
+		let mut right = x;
+		let end = 1 << self.width as usize;
+		while right < end && self.field[y] & right == 0 {
+			right <<= 1;
+		}
+		let right = right;
+		// Mask all the blocks between left and right
+		let mask = right - left;
+		// println!("y:{} field:{:010b}, x:{:010b} left:{:010b} right:{:010b} mask:{:010b}", y, self.field[y], x, left, right, mask);
+		self.field[y] |= mask;
+		// Recursively try one row higher, since this is rare test it before hand
+		if y < (self.height - 1) as usize && self.field[y + 1] & mask != mask {
+			let mut it = left;
+			while it < right {
+				if self.field[y + 1] & it == 0 {
+					self._flood_fill(y + 1, it);
 				}
-			}
-			// Recursively check downwards
-			if y > 0 {
-				let mut it = left;
-				while it != right {
-					if well.field[y - 1] & it == 0 {
-						rec(well, y - 1, it);
-					}
-					it <<= 1;
-				}
+				it <<= 1;
 			}
 		}
-		// Start by masking the upper line
-		self.field[(self.height - 1) as usize] = self.line_mask();
-		// Scan from the top of the well down
-		let y = self.height - 2;
-		rec(self, y as usize, 1);
+		// Recursively try one row lower
+		if y > 0 {
+			let mut it = left;
+			while it < right {
+				if self.field[y - 1] & it == 0 {
+					self._flood_fill(y - 1, it);
+				}
+				it <<= 1;
+			}
+		}
 	}
 }
 
@@ -495,5 +502,29 @@ mod tests {
 		            |□□ □□□   □|\n\
 		            |□□□□     □|\n\
 		            +----------+", format!("{}", well));
+	}
+
+	#[test]
+	fn flood_fill() {
+		let mut well = Well::from_data(10, &[
+			0b0000000011,
+			0b0000011011,
+			0b0001100100,
+			0b1000000100,
+			0b0100101000,
+			0b0011010000,
+		]);
+		println!("\n{}", well);
+		well.flood_fill();
+		println!("{}", well);
+		let result = Well::from_data(10, &[
+			0b1111111111,
+			0b1111111111,
+			0b1111111100,
+			0b1111111100,
+			0b0111111000,
+			0b0011010000,
+		]);
+		assert_eq!(result, well);
 	}
 }

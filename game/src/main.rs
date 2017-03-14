@@ -68,7 +68,7 @@ fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
 	}
 }
 
-fn open_controller(gcs: &GameControllerSubsystem) -> GameController {
+fn open_controller(gcs: &GameControllerSubsystem) -> Option<GameController> {
 	let available = match gcs.num_joysticks() {
 		Ok(n)  => n,
 		Err(e) => panic!("can't enumerate joysticks: {}", e),
@@ -100,13 +100,14 @@ fn open_controller(gcs: &GameControllerSubsystem) -> GameController {
 		}
 	}
 
-	match controller {
-		Some(c) => {
-			println!("Controller mapping: {}", c.mapping());
-			return c;
-		},
-		None => panic!("Couldn't open any controller"),
-	};
+	// match controller {
+	// 	Some(c) => {
+	// 		println!("Controller mapping: {}", c.mapping());
+	// 		return c;
+	// 	},
+	// 	None => panic!("Couldn't open any controller"),
+	// };
+	controller
 }
 
 fn main() {
@@ -133,16 +134,14 @@ fn main() {
 	let mut state = tetrs::State::new(10, 22);
 	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new() };
 	let mut play_i = 0;
-	let weights = tetrs::Weights::new();
-	let mut bag = tetrs::OfficialBag::default();
-	// let mut bag = tetrs::WorstBag::new(tetrs::Weights::new());
+	let mut bag = tetrs::WorstBag::default();
 
     'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
 			use tetrs::Bag;
 			let next_piece = bag.next(state.well()).unwrap();
 			if !state.spawn(next_piece) {
-				play = tetrs::PlayI::play(&weights, state.well(), *state.player().unwrap());
+				play = tetrs::PlayI::play(&tetrs::Weights::default(), state.well(), *state.player().unwrap());
 				play_i = 0;
 			}
 		}
@@ -201,6 +200,6 @@ fn main() {
 
 		renderer.present();
 
-		thread::sleep(Duration::from_millis(1));
+		thread::sleep(Duration::from_millis(32));
     }
 }
