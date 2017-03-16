@@ -5,14 +5,14 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Piece};
+use ::{Player, Piece, Point};
 
 /// Maximum well height.
 ///
 /// If this is changed, don't forget to update the documentation for `Well::new`.
 ///
 /// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
-pub const MAX_HEIGHT: usize = 22;
+pub const MAX_HEIGHT: usize = 23;
 /// Maxium well width.
 ///
 /// If this is changed, don't forget to update the documentation for `Well::new`.
@@ -34,7 +34,6 @@ pub type Line = u16;
 pub struct Well {
 	width: i8,
 	height: i8,
-	_pad: i16,
 	field: [Line; MAX_HEIGHT],
 }
 
@@ -52,7 +51,6 @@ impl Well {
 		Well {
 			width: width,
 			height: height,
-			_pad: 0,
 			field: [0; MAX_HEIGHT],
 		}
 	}
@@ -251,55 +249,64 @@ impl Well {
 impl Well {
 	pub fn count_holes(&self) -> i32 {
 		let mut well = *self;
-		well.flood_fill();
-		self.width as i32 * self.height as i32 - self.count_blocks() as i32
+		let seed = Point::new(self.width >> 1, self.height - 1);
+		well.flood_fill(seed);
+		well.width as i32 * well.height as i32 - well.count_blocks() as i32
 	}
 	/// Returns the number of blocks in the field.
 	pub fn count_blocks(&self) -> u32 {
 		self.lines().iter().map(|&line| line.count_ones()).sum()
 	}
-	/// Flood fills the field.
-	///
-	/// The flood starts from the top-center of the field.
-	pub fn flood_fill(&mut self) {
-		let y = self.height - 1;
-		let x = self.width as usize / 2;
-		self._flood_fill(y as usize, 1 << x);
+	/// Flood fills the field from the given seeding point.
+	pub fn flood_fill(&mut self, seed: Point) {
+		self._flood_fill(seed.y as usize, 1 << seed.x as usize);
 	}
 	fn _flood_fill(&mut self, y: usize, x: Line) {
-		// Find the left edge
-		let mut left = x;
-		while left > 1 && self.field[y] & (left >> 1) == 0 {
-			left >>= 1;
+		// Bounds check it early (optimizer is dumb...)
+		//let _ = self.lines()[y];
+		// WARNING! UB if `width >= sizeof(Line) * 8`...
+		let end = (1u32 << self.width as usize) as Line;
+		// Since the top of the well is most likely open, optimize for this case
+		let (left, right) = if self.field[y] == 0 {
+			(1, end)
 		}
-		let left = left;
-		// Find the right edge (+ 1)
-		let mut right = x;
-		let end = 1 << self.width as usize;
-		while right < end && self.field[y] & right == 0 {
-			right <<= 1;
-		}
-		let right = right;
+		else {
+			// Find the left edge
+			let mut left = x;
+			while left > 1 && self.field[y] & (left >> 1) == 0 {
+				left >>= 1;
+			}
+			// Find the right edge (+ 1)
+			let mut right = x;
+			while right < end && self.field[y] & right == 0 {
+				right <<= 1;
+			}
+			(left, right)
+		};
 		// Mask all the blocks between left and right
 		let mask = right - left;
-		// println!("y:{} field:{:010b}, x:{:010b} left:{:010b} right:{:010b} mask:{:010b}", y, self.field[y], x, left, right, mask);
 		self.field[y] |= mask;
-		// Recursively try one row higher, since this is rare test it before hand
-		if y < (self.height - 1) as usize && self.field[y + 1] & mask != mask {
-			let mut it = left;
-			while it < right {
-				if self.field[y + 1] & it == 0 {
-					self._flood_fill(y + 1, it);
-				}
-				it <<= 1;
+
+		// Let's do some tail call optimization first
+		if y >= 1 {
+			if self.field[y - 1] & mask == 0 {
+				return self._flood_fill(y - 1, left);
 			}
-		}
-		// Recursively try one row lower
-		if y > 0 {
+			// Recursively flood the rest
 			let mut it = left;
 			while it < right {
 				if self.field[y - 1] & it == 0 {
 					self._flood_fill(y - 1, it);
+				}
+				it <<= 1;
+			}
+		}
+		// Since we're flooding top to bottom first, this case is considerably more rare
+		if y + 1 < self.height as usize && self.field[y + 1] & mask != mask {
+			let mut it = left;
+			while it < right {
+				if self.field[y + 1] & it == 0 {
+					self._flood_fill(y + 1, it);
 				}
 				it <<= 1;
 			}
@@ -369,7 +376,6 @@ impl FromStr for Well {
 			Ok(Well {
 				width: width as i8,
 				height: height as i8,
-				_pad: 0,
 				field: field,
 			})
 		}
@@ -515,7 +521,7 @@ mod tests {
 			0b0011010000,
 		]);
 		println!("\n{}", well);
-		well.flood_fill();
+		well.flood_fill(Point::new(5, 5));
 		println!("{}", well);
 		let result = Well::from_data(10, &[
 			0b1111111111,

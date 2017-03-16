@@ -9,8 +9,10 @@ use ::{Well, Rot, Piece, Player, Point, MAX_WIDTH, MAX_HEIGHT};
 /// Weights for evaluating well.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Weights {
-	/// Factor for the total combined height of all the columns.
+	/// Factor for the total combined height of the columns.
 	pub agg_height_f: f64,
+	/// Factor for the max height of the columns.
+	pub max_height_f: f64,
 	/// Factor for the number of completed lines.
 	pub complete_lines_f: f64,
 	/// Factor for the number of holes in the field.
@@ -29,9 +31,10 @@ impl Default for Weights {
 	fn default() -> Weights {
 		Weights {
 			agg_height_f: -0.510066,
+			max_height_f: -0.510066,
 			complete_lines_f: 0.760666,
-			holes_f: -0.45663,
-			caves_f: -0.25663,
+			holes_f: -0.35663,
+			caves_f: 0.0,
 			bumpiness_f: -0.184483,
 			stacking_f: -0.5,
 
@@ -65,16 +68,17 @@ impl Weights {
 			return f64::NEG_INFINITY;
 		}
 
-		let (agg_height, completed_lines, holes, caves, bumpiness, stacks) = Self::crunch(well);
+		let (agg_height, max_height, completed_lines, holes, caves, bumpiness, stacks) = Self::crunch(well);
 		return
 			self.agg_height_f * agg_height as f64 +
+			self.max_height_f * max_height as f64 +
 			self.complete_lines_f * completed_lines as f64 +
 			self.holes_f * holes as f64 +
 			self.caves_f * caves as f64 +
 			self.bumpiness_f * bumpiness as f64 +
 			self.stacking_f * stacks as f64;
 	}
-	fn crunch(well: &Well) -> (i32, i32, i32, i32, i32, i32) {
+	fn crunch(well: &Well) -> (i32, i32, i32, i32, i32, i32, i32) {
 		let width = well.width() as usize;
 		let mut heights = [0i32; MAX_WIDTH];
 		let mut holes = [0i32; MAX_WIDTH];
@@ -110,11 +114,12 @@ impl Weights {
 
 		let holes_sum = well.count_holes();
 		let height_sum = heights[..width].iter().sum();
+		let heights_max = heights[..width].iter().max().cloned().unwrap();
 		let caves_sum = holes[..width].iter().fold(0, ops::Add::add) - holes_sum;
 		let stacks_sum = stacks[..width].iter().sum();
 		let bumpiness = heights[..width].windows(2).map(|window| (window[0] - window[1]).abs()).sum();
 
-		(height_sum, lines, holes_sum, caves_sum, bumpiness, stacks_sum)
+		(height_sum, heights_max, lines, holes_sum, caves_sum, bumpiness, stacks_sum)
 	}
 }
 
@@ -304,6 +309,7 @@ mod tests {
 	#[test]
 	fn tdd() {
 		let well = Well::from_data(10, &[
+			0b0000000000,
 			0b0000110000,
 			0b0111111001,
 			0b0110111111,
@@ -311,10 +317,11 @@ mod tests {
 			0b1110111111,
 			0b1111111111,
 		]);
-		let (heights_sum, lines, holes_sum, bumpiness, stacks) = Weights::crunch(&well);
+		let (heights_sum, lines, holes_sum, caves_sum, bumpiness, stacks) = Weights::crunch(&well);
 		assert_eq!(28, heights_sum);
 		assert_eq!(2, lines);
 		assert_eq!(2, holes_sum);
+		assert_eq!(0, caves_sum);
 		assert_eq!(6, bumpiness);
 		assert_eq!(1, stacks);
 	}
