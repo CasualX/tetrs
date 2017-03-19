@@ -19,32 +19,22 @@ pub trait Bag {
 ///
 /// > The Random Generator generates a sequence of all seven tetrominoes permuted randomly as if they were drawn from a bag.
 /// > Then it deals all seven tetrominoes to the piece sequence before generating another bag.
+///
+/// Because of the ability to peek ahead at the next piece, must keep track of the next seven tetrominoes as well.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OfficialBag<R: Rng> {
 	rng: R,
-	bag: [Piece; 7],
+	bag: [Piece; 14],
 	pos: u8,
 }
 impl<R: Rng> OfficialBag<R> {
 	pub fn with_rng(rng: R) -> OfficialBag<R> {
 		OfficialBag {
 			rng: rng,
-			bag: [Piece::O, Piece::I, Piece::S, Piece::Z, Piece::L, Piece::J, Piece::T],
-			pos: 7,
+			bag: [Piece::O, Piece::I, Piece::S, Piece::Z, Piece::L, Piece::J, Piece::T,
+			      Piece::O, Piece::I, Piece::S, Piece::Z, Piece::L, Piece::J, Piece::T],
+			pos: 255,
 		}
-	}
-	fn shuffle(&mut self) {
-		let pieces = if self.pos < 7 {
-			// Since the player has already been shown the next piece, make sure it comes next
-			self.bag.swap(0, 6);
-			// Shuffle the remaining 6 pieces
-			&mut self.bag[1..]
-		}
-		else {
-			// Shuffle all the pieces
-			&mut self.bag[..]
-		};
-		self.rng.shuffle(pieces);
 	}
 }
 impl Default for OfficialBag<ThreadRng> {
@@ -54,11 +44,16 @@ impl Default for OfficialBag<ThreadRng> {
 }
 impl<R: Rng> Bag for OfficialBag<R> {
 	fn next(&mut self, _well: &Well) -> Option<Piece> {
-		if self.pos >= 6 {
-			self.shuffle();
+		let (left, right) = self.bag.split_at_mut(7);
+		if self.pos >= 14 {
+			self.rng.shuffle(right);
+		}
+		if self.pos >= 7 {
+			left.copy_from_slice(right);
+			self.rng.shuffle(right);
 			self.pos = 0;
 		}
-		let next_piece = self.bag[self.pos as usize];
+		let next_piece = left[self.pos as usize];
 		self.pos += 1;
 		Some(next_piece)
 	}

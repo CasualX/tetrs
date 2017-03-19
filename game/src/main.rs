@@ -136,7 +136,7 @@ fn main() {
 	let mut play_i = 0;
 	let mut bag = tetrs::OfficialBag::default();
 
-    'quit: loop {
+	'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
 			use tetrs::Bag;
 			let next_piece = bag.next(state.well()).unwrap();
@@ -147,8 +147,8 @@ fn main() {
 		}
 
 		for e in events.poll_iter() {
-            use sdl2::event::Event::*;
-            use sdl2::keyboard::Keycode::*;
+			use sdl2::event::Event::*;
+			use sdl2::keyboard::Keycode::*;
 			use sdl2::controller::Button;
 			match e {
 				Quit { .. } => break 'quit,
@@ -200,6 +200,6 @@ fn main() {
 
 		renderer.present();
 
-		thread::sleep(Duration::from_millis(1));
-    }
+		thread::sleep(Duration::from_millis(25));
+	}
 }
