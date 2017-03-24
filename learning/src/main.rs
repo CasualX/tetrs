@@ -19,7 +19,7 @@ fn main() {
 	loop {
 		let weights: tetrs::Weights = rng.gen();
 		let score = fitness(&weights);
-		if score > best_score {
+		if score < best_score {
 			best_weights = weights;
 			best_score = score;
 			iterations = 0;

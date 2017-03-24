@@ -29,24 +29,24 @@ pub struct Weights {
 /// Gently appropriated from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
 impl Default for Weights {
 	fn default() -> Weights {
-		// Weights {
-		// 	agg_height_f: -0.510066,
-		// 	max_height_f: -0.510066,
-		// 	complete_lines_f: 0.760666,
-		// 	holes_f: -0.35663,
-		// 	caves_f: 0.0,
-		// 	bumpiness_f: -0.184483,
-		// 	stacking_f: -0.5,
-		// }
-Weights {
-    agg_height_f: -0.2803344111164008,
-    max_height_f: 0.02526504071606306,
-    complete_lines_f: 0.20605120395222354,
-    holes_f: -0.18751829871729053,
-    caves_f: -0.3557762709568737,
-    bumpiness_f: -0.12041213579170762,
-    stacking_f: -0.06944294190822053
-}
+		Weights {
+			agg_height_f: -0.510066,
+			max_height_f: -0.510066,
+			complete_lines_f: 0.760666,
+			holes_f: -0.35663,
+			caves_f: 0.0,
+			bumpiness_f: -0.184483,
+			stacking_f: -0.5,
+		}
+// Weights {
+//     agg_height_f: -0.2803344111164008,
+//     max_height_f: 0.02526504071606306,
+//     complete_lines_f: 0.20605120395222354,
+//     holes_f: -0.18751829871729053,
+//     caves_f: -0.3557762709568737,
+//     bumpiness_f: -0.12041213579170762,
+//     stacking_f: -0.06944294190822053
+// }
 	}
 }
 impl ::rand::Rand for Weights {

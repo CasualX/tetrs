@@ -9,6 +9,7 @@ use sdl2::rect::Rect;
 use sdl2::render::Renderer;
 use sdl2::GameControllerSubsystem;
 use sdl2::controller::GameController;
+use sdl2::image::{LoadTexture, INIT_PNG};
 
 use std::time::Duration;
 use std::thread;
@@ -118,6 +119,8 @@ fn main() {
 	let gcs = sdl_context.game_controller().unwrap();
 	let _controller = open_controller(&gcs);
 
+	let _image = sdl2::image::init(INIT_PNG).unwrap();
+
 	// Create the window
 	let window = video.window("Tetrs", 171, 375)
 		.position_centered().opengl()
@@ -127,6 +130,8 @@ fn main() {
 		.accelerated()
 		.build().unwrap();
 
+	let atlas = renderer.load_texture("C:\\Users\\Dries\\Projects\\tetrs\\assets\\tiles2.png").unwrap();
+
 	// Event pump
 	let mut events = sdl_context.event_pump().unwrap();
 
@@ -134,7 +139,7 @@ fn main() {
 	let mut state = tetrs::State::new(10, 22);
 	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new(), player: None };
 	let mut play_i = 0;
-	let mut bag = tetrs::OfficialBag::default();
+	let mut bag = tetrs::BestBag::default();
 
 	'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
@@ -195,6 +200,7 @@ fn main() {
 		// Render a fully black window
 		renderer.set_draw_color(Color::RGB(0, 0, 0));
 		renderer.clear();
+		renderer.copy(&atlas, None, None).unwrap();
 		
 		draw(&mut renderer, &state.scene());
 
