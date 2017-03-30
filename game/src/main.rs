@@ -22,75 +22,81 @@ struct Sprites {
 	pieces: [Rect; 8],
 	bg: Rect,
 	ghost: Rect,
+	field_x: i32,
+	field_y: i32,
 }
+
+/// Width and height of a tile.
+const TILE_SIZE: i32 = 20;
 
 struct Graphics<'a> {
 	renderer: Renderer<'a>,
 	atlas: Texture,
+	background: Texture,
 	sprites: Sprites,
 }
 
 fn draw(cg: &mut Graphics, scene: &tetrs::Scene) {
 	cg.renderer.set_draw_color(Color::RGB(0, 0, 0));
 	cg.renderer.clear();
+	cg.renderer.copy(&cg.background, None, None).unwrap();
 
-	draw_scene2(cg, scene);
+	draw_scene1(cg, scene);
 
 	cg.renderer.present();
 }
 
-fn color(piece: Option<tetrs::Piece>) -> Color {
-	match piece {
-		Some(tetrs::Piece::O) => Color::RGB(241, 238, 81),
-		Some(tetrs::Piece::I) => Color::RGB(83, 254, 248),
-		Some(tetrs::Piece::S) => Color::RGB(84, 254, 87),
-		Some(tetrs::Piece::Z) => Color::RGB(255, 85, 85),
-		Some(tetrs::Piece::L) => Color::RGB(254, 203, 36),
-		Some(tetrs::Piece::J) => Color::RGB(84, 85, 255),
-		Some(tetrs::Piece::T) => Color::RGB(255, 85, 254),
-		None => Color::RGB(170, 170, 170),
-	}
-}
-
 fn draw_scene1(cg: &mut Graphics, scene: &tetrs::Scene) {
-	// Draw the columns
-	cg.renderer.set_draw_color(Color::RGB(46, 46, 46));
 	let width = scene.width() as i32;
 	let height = scene.height() as i32;
-	for col in 0..width {
-		let rect = Rect::new(col * 17, 0, 1, (height * 17) as u32);
-		cg.renderer.fill_rect(rect).unwrap();
-	}
-	// Draw the rows
-	for row in 0..height {
-		let rect = Rect::new(0, row * 17, (width * 17) as u32, 1);
-		cg.renderer.fill_rect(rect).unwrap();
-	}
 	// Draw the scene
 	for row in 0..height {
 		let line = scene.line(row as i8);
 		for col in 0..width {
 			let tile = line[col as usize];
-			let rect = Rect::new(1 + col * 17, 1 + row * 17, 16, 16);
+			let x = cg.sprites.field_x + col * TILE_SIZE;
+			let y = cg.sprites.field_y + row * TILE_SIZE;
+			let rect = Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32);
 
 			use tetrs::TileTy::*;
 			match tile.tile_ty() {
-				Field => {
-					cg.renderer.set_draw_color(color(tile.piece()));
+				Field | Player => {
+					use tetrs::Piece;
+					let color = match tile.piece() {
+						Some(Piece::O) => Color::RGB(241, 238, 81),
+						Some(Piece::I) => Color::RGB(83, 254, 248),
+						Some(Piece::S) => Color::RGB(84, 254, 87),
+						Some(Piece::Z) => Color::RGB(255, 85, 85),
+						Some(Piece::L) => Color::RGB(254, 203, 36),
+						Some(Piece::J) => Color::RGB(84, 85, 255),
+						Some(Piece::T) => Color::RGB(255, 85, 254),
+						None => Color::RGB(170, 170, 170),
+					};
+					cg.renderer.set_draw_color(color);
 					cg.renderer.fill_rect(rect).unwrap();
 				},
 				Ghost => {
 					cg.renderer.set_draw_color(Color::RGB(50, 50, 50));
 					cg.renderer.fill_rect(rect).unwrap();
 				},
-				Player => {
-					cg.renderer.set_draw_color(color(tile.piece()));
-					cg.renderer.fill_rect(rect).unwrap();
-				},
-				Background => {
-				},
+				Background => {},
 			};
 		}
+	}
+
+	// Draw the columns
+	cg.renderer.set_draw_color(Color::RGB(46, 46, 46));
+	for col in 0..width + 1 {
+		let x = cg.sprites.field_x + col * TILE_SIZE;
+		let rect = Rect::new(x, cg.sprites.field_y, 1, (height * TILE_SIZE) as u32);
+		cg.renderer.fill_rect(rect).unwrap();
+	}
+
+	// Draw the rows
+	for row in 0..height + 1 {
+		let y = cg.sprites.field_y + row * TILE_SIZE;
+		let rect = Rect::new(cg.sprites.field_x, y, (width * TILE_SIZE) as u32, 1);
+		cg.renderer.fill_rect(rect).unwrap();
 	}
 }
 
@@ -101,7 +107,9 @@ fn draw_scene2(cg: &mut Graphics, scene: &tetrs::Scene) {
 		let line = scene.line(row as i8);
 		for col in 0..width {
 			let tile = line[col as usize];
-			let rect = Rect::new(1 + col * 17, 1 + row * 17, 16, 16);
+			let x = cg.sprites.field_x + col * TILE_SIZE;
+			let y = cg.sprites.field_y + row * TILE_SIZE;
+			let rect = Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32);
 
 			use tetrs::TileTy::*;
 			match tile.tile_ty() {
@@ -114,7 +122,6 @@ fn draw_scene2(cg: &mut Graphics, scene: &tetrs::Scene) {
 					cg.renderer.copy(&cg.atlas, Some(cg.sprites.ghost), Some(rect)).unwrap();
 				},
 				Background => {
-					cg.renderer.copy(&cg.atlas, Some(cg.sprites.bg), Some(rect)).unwrap();
 				},
 			};
 		}
@@ -178,7 +185,7 @@ fn main() {
 	let _image = sdl2::image::init(INIT_PNG).unwrap();
 
 	// Create the window
-	let window = video.window("Tetrs", 171, 375)
+	let window = video.window("Tetrs", 520, 600)
 		.position_centered().opengl()
 		.build().unwrap();
 
@@ -187,7 +194,8 @@ fn main() {
 		.accelerated()
 		.build().unwrap();
 
-		let atlas = renderer.load_texture("assets\\tiles2.png").unwrap();
+		let atlas = renderer.load_texture("assets/tiles2.png").unwrap();
+		let background = renderer.load_texture("assets/background.png").unwrap();
 
 		let sprites = Sprites {
 			pieces: [
@@ -202,11 +210,14 @@ fn main() {
 			],
 			bg: Rect::new(20 * 7, 0, 20, 20),
 			ghost: Rect::new(20 * 7, 0, 20, 20),
+			field_x: 160,
+			field_y: 127,
 		};
 
 		Graphics {
 			renderer: renderer,
 			atlas: atlas,
+			background: background,
 			sprites: sprites,
 		}
 	};
@@ -278,6 +289,6 @@ fn main() {
 
 		draw(&mut cg, &state.scene());
 
-		thread::sleep(Duration::from_millis(1));
+		thread::sleep(Duration::from_millis(20));
 	}
 }
