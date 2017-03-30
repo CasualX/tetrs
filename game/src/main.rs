@@ -1,18 +1,43 @@
 /*!
 */
 
+#![allow(dead_code)]
+
 extern crate tetrs;
 extern crate sdl2;
 
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
-use sdl2::render::Renderer;
+use sdl2::render::{Renderer, Texture};
 use sdl2::GameControllerSubsystem;
 use sdl2::controller::GameController;
 use sdl2::image::{LoadTexture, INIT_PNG};
 
 use std::time::Duration;
 use std::thread;
+
+//----------------------------------------------------------------
+
+struct Sprites {
+	pieces: [Rect; 8],
+	bg: Rect,
+	ghost: Rect,
+}
+
+struct Graphics<'a> {
+	renderer: Renderer<'a>,
+	atlas: Texture,
+	sprites: Sprites,
+}
+
+fn draw(cg: &mut Graphics, scene: &tetrs::Scene) {
+	cg.renderer.set_draw_color(Color::RGB(0, 0, 0));
+	cg.renderer.clear();
+
+	draw_scene2(cg, scene);
+
+	cg.renderer.present();
+}
 
 fn color(piece: Option<tetrs::Piece>) -> Color {
 	match piece {
@@ -27,19 +52,19 @@ fn color(piece: Option<tetrs::Piece>) -> Color {
 	}
 }
 
-fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
+fn draw_scene1(cg: &mut Graphics, scene: &tetrs::Scene) {
 	// Draw the columns
-	renderer.set_draw_color(Color::RGB(46, 46, 46));
+	cg.renderer.set_draw_color(Color::RGB(46, 46, 46));
 	let width = scene.width() as i32;
 	let height = scene.height() as i32;
 	for col in 0..width {
 		let rect = Rect::new(col * 17, 0, 1, (height * 17) as u32);
-		renderer.fill_rect(rect).unwrap();
+		cg.renderer.fill_rect(rect).unwrap();
 	}
 	// Draw the rows
 	for row in 0..height {
 		let rect = Rect::new(0, row * 17, (width * 17) as u32, 1);
-		renderer.fill_rect(rect).unwrap();
+		cg.renderer.fill_rect(rect).unwrap();
 	}
 	// Draw the scene
 	for row in 0..height {
@@ -51,16 +76,16 @@ fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
 			use tetrs::TileTy::*;
 			match tile.tile_ty() {
 				Field => {
-					renderer.set_draw_color(color(tile.piece()));
-					renderer.fill_rect(rect).unwrap();
+					cg.renderer.set_draw_color(color(tile.piece()));
+					cg.renderer.fill_rect(rect).unwrap();
 				},
 				Ghost => {
-					renderer.set_draw_color(Color::RGB(50, 50, 50));
-					renderer.fill_rect(rect).unwrap();
+					cg.renderer.set_draw_color(Color::RGB(50, 50, 50));
+					cg.renderer.fill_rect(rect).unwrap();
 				},
 				Player => {
-					renderer.set_draw_color(color(tile.piece()));
-					renderer.fill_rect(rect).unwrap();
+					cg.renderer.set_draw_color(color(tile.piece()));
+					cg.renderer.fill_rect(rect).unwrap();
 				},
 				Background => {
 				},
@@ -68,6 +93,35 @@ fn draw(renderer: &mut Renderer, scene: &tetrs::Scene) {
 		}
 	}
 }
+
+fn draw_scene2(cg: &mut Graphics, scene: &tetrs::Scene) {
+	let width = scene.width() as i32;
+	let height = scene.height() as i32;
+	for row in 0..height {
+		let line = scene.line(row as i8);
+		for col in 0..width {
+			let tile = line[col as usize];
+			let rect = Rect::new(1 + col * 17, 1 + row * 17, 16, 16);
+
+			use tetrs::TileTy::*;
+			match tile.tile_ty() {
+				Field | Player => {
+					let piece = tile.piece().map(|p| p as usize).unwrap_or(7);
+					let sprite = cg.sprites.pieces[piece];
+					cg.renderer.copy(&cg.atlas, Some(sprite), Some(rect)).unwrap();
+				},
+				Ghost => {
+					cg.renderer.copy(&cg.atlas, Some(cg.sprites.ghost), Some(rect)).unwrap();
+				},
+				Background => {
+					cg.renderer.copy(&cg.atlas, Some(cg.sprites.bg), Some(rect)).unwrap();
+				},
+			};
+		}
+	}
+}
+
+//----------------------------------------------------------------
 
 fn open_controller(gcs: &GameControllerSubsystem) -> Option<GameController> {
 	let available = match gcs.num_joysticks() {
@@ -111,6 +165,8 @@ fn open_controller(gcs: &GameControllerSubsystem) -> Option<GameController> {
 	controller
 }
 
+//----------------------------------------------------------------
+
 fn main() {
 	// Initialize SDL2
 	let sdl_context = sdl2::init().unwrap();
@@ -126,11 +182,34 @@ fn main() {
 		.position_centered().opengl()
 		.build().unwrap();
 
-	let mut renderer = window.renderer()
+	let mut cg = {
+		let renderer = window.renderer()
 		.accelerated()
 		.build().unwrap();
 
-	let atlas = renderer.load_texture("C:\\Users\\Dries\\Projects\\tetrs\\assets\\tiles2.png").unwrap();
+		let atlas = renderer.load_texture("assets\\tiles2.png").unwrap();
+
+		let sprites = Sprites {
+			pieces: [
+				Rect::new(20 * 6, 0, 20, 20),
+				Rect::new(20 * 2, 0, 20, 20),
+				Rect::new(20 * 3, 0, 20, 20),
+				Rect::new(20 * 0, 0, 20, 20),
+				Rect::new(20 * 1, 0, 20, 20),
+				Rect::new(20 * 4, 0, 20, 20),
+				Rect::new(20 * 5, 0, 20, 20),
+				Rect::new(20 * 5, 0, 20, 20),
+			],
+			bg: Rect::new(20 * 7, 0, 20, 20),
+			ghost: Rect::new(20 * 7, 0, 20, 20),
+		};
+
+		Graphics {
+			renderer: renderer,
+			atlas: atlas,
+			sprites: sprites,
+		}
+	};
 
 	// Event pump
 	let mut events = sdl_context.event_pump().unwrap();
@@ -139,7 +218,7 @@ fn main() {
 	let mut state = tetrs::State::new(10, 22);
 	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new(), player: None };
 	let mut play_i = 0;
-	let mut bag = tetrs::BestBag::default();
+	let mut bag = tetrs::OfficialBag::default();
 
 	'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
@@ -197,15 +276,8 @@ fn main() {
 
 		state.clear_lines(|_| ());
 
-		// Render a fully black window
-		renderer.set_draw_color(Color::RGB(0, 0, 0));
-		renderer.clear();
-		renderer.copy(&atlas, None, None).unwrap();
-		
-		draw(&mut renderer, &state.scene());
+		draw(&mut cg, &state.scene());
 
-		renderer.present();
-
-		thread::sleep(Duration::from_millis(25));
+		thread::sleep(Duration::from_millis(1));
 	}
 }
