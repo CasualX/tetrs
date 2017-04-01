@@ -12,6 +12,8 @@ use sdl2::render::{Renderer, Texture};
 use sdl2::GameControllerSubsystem;
 use sdl2::controller::GameController;
 use sdl2::image::{LoadTexture, INIT_PNG};
+use sdl2::EventPump;
+use sdl2::event::Event;
 
 use std::time::Duration;
 use std::thread;
@@ -20,8 +22,9 @@ use std::thread;
 
 struct Sprites {
 	pieces: [Rect; 8],
-	bg: Rect,
 	ghost: Rect,
+}
+struct Map {
 	field_x: i32,
 	field_y: i32,
 }
@@ -34,6 +37,7 @@ struct Graphics<'a> {
 	atlas: Texture,
 	background: Texture,
 	sprites: Sprites,
+	map: Map,
 }
 
 fn draw(cg: &mut Graphics, scene: &tetrs::Scene) {
@@ -41,7 +45,7 @@ fn draw(cg: &mut Graphics, scene: &tetrs::Scene) {
 	cg.renderer.clear();
 	cg.renderer.copy(&cg.background, None, None).unwrap();
 
-	draw_scene1(cg, scene);
+	draw_scene2(cg, scene);
 
 	cg.renderer.present();
 }
@@ -54,8 +58,8 @@ fn draw_scene1(cg: &mut Graphics, scene: &tetrs::Scene) {
 		let line = scene.line(row as i8);
 		for col in 0..width {
 			let tile = line[col as usize];
-			let x = cg.sprites.field_x + col * TILE_SIZE;
-			let y = cg.sprites.field_y + row * TILE_SIZE;
+			let x = cg.map.field_x + col * TILE_SIZE;
+			let y = cg.map.field_y + row * TILE_SIZE;
 			let rect = Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32);
 
 			use tetrs::TileTy::*;
@@ -87,15 +91,15 @@ fn draw_scene1(cg: &mut Graphics, scene: &tetrs::Scene) {
 	// Draw the columns
 	cg.renderer.set_draw_color(Color::RGB(46, 46, 46));
 	for col in 0..width + 1 {
-		let x = cg.sprites.field_x + col * TILE_SIZE;
-		let rect = Rect::new(x, cg.sprites.field_y, 1, (height * TILE_SIZE) as u32);
+		let x = cg.map.field_x + col * TILE_SIZE;
+		let rect = Rect::new(x, cg.map.field_y, 1, (height * TILE_SIZE) as u32);
 		cg.renderer.fill_rect(rect).unwrap();
 	}
 
 	// Draw the rows
 	for row in 0..height + 1 {
-		let y = cg.sprites.field_y + row * TILE_SIZE;
-		let rect = Rect::new(cg.sprites.field_x, y, (width * TILE_SIZE) as u32, 1);
+		let y = cg.map.field_y + row * TILE_SIZE;
+		let rect = Rect::new(cg.map.field_x, y, (width * TILE_SIZE) as u32, 1);
 		cg.renderer.fill_rect(rect).unwrap();
 	}
 }
@@ -107,8 +111,8 @@ fn draw_scene2(cg: &mut Graphics, scene: &tetrs::Scene) {
 		let line = scene.line(row as i8);
 		for col in 0..width {
 			let tile = line[col as usize];
-			let x = cg.sprites.field_x + col * TILE_SIZE;
-			let y = cg.sprites.field_y + row * TILE_SIZE;
+			let x = cg.map.field_x + col * TILE_SIZE;
+			let y = cg.map.field_y + row * TILE_SIZE;
 			let rect = Rect::new(x, y, TILE_SIZE as u32, TILE_SIZE as u32);
 
 			use tetrs::TileTy::*;
@@ -174,6 +178,69 @@ fn open_controller(gcs: &GameControllerSubsystem) -> Option<GameController> {
 
 //----------------------------------------------------------------
 
+enum Command {
+	Quit,
+	Down(tetrs::Play),
+	Up(tetrs::Play),
+}
+impl Command {
+	fn from_event(e: Event) -> Option<Command> {
+		use sdl2::event::Event::*;
+		use sdl2::keyboard::Keycode::*;
+		use sdl2::controller::Button;
+		use tetrs::Play::*;
+		match e {
+			Quit { .. } => {
+				Some(Command::Quit)
+			},
+			KeyDown { keycode, .. } => match keycode {
+				Some(Left) => { Some(Command::Down(MoveLeft)) },
+				Some(Right) => { Some(Command::Down(MoveRight)) },
+				Some(Down) => { Some(Command::Down(SoftDrop)) },
+				Some(Up) => { Some(Command::Down(RotateCW)) },
+				Some(Space) => { Some(Command::Down(HardDrop)) },
+				Some(LCtrl) => { Some(Command::Down(RotateCCW)) },
+				_ => None,
+			},
+			KeyUp { keycode, .. } => match keycode {
+				Some(Left) => { Some(Command::Up(MoveLeft)) },
+				Some(Right) => { Some(Command::Up(MoveRight)) },
+				Some(Down) => { Some(Command::Up(SoftDrop)) },
+				Some(Up) => { Some(Command::Up(RotateCW)) },
+				Some(Space) => { Some(Command::Up(HardDrop)) },
+				Some(LCtrl) => { Some(Command::Up(RotateCCW)) },
+				_ => None,
+			},
+			ControllerButtonDown { button, .. } => match button {
+				Button::DPadLeft => { Some(Command::Down(MoveLeft)) },
+				Button::DPadRight => { Some(Command::Down(MoveRight)) },
+				Button::DPadDown => { Some(Command::Down(SoftDrop)) },
+				Button::X => { Some(Command::Down(RotateCCW)) },
+				Button::Y => { Some(Command::Down(HardDrop)) },
+				Button::B => { Some(Command::Down(RotateCW)) },
+				Button::A => { Some(Command::Down(HardDrop)) },
+				_ => None,
+			},
+			ControllerButtonUp { button, .. } => match button {
+				Button::DPadLeft => { Some(Command::Up(MoveLeft)) },
+				Button::DPadRight => { Some(Command::Up(MoveRight)) },
+				Button::DPadDown => { Some(Command::Up(SoftDrop)) },
+				Button::X => { Some(Command::Up(RotateCCW)) },
+				Button::Y => { Some(Command::Up(HardDrop)) },
+				Button::B => { Some(Command::Up(RotateCW)) },
+				Button::A => { Some(Command::Up(HardDrop)) },
+				_ => None,
+			},
+			_e => {
+				// println!("event: {:?}", _e);
+				None
+			},
+		}
+	}
+}
+
+//----------------------------------------------------------------
+
 fn main() {
 	// Initialize SDL2
 	let sdl_context = sdl2::init().unwrap();
@@ -194,24 +261,27 @@ fn main() {
 		.accelerated()
 		.build().unwrap();
 
-		let atlas = renderer.load_texture("assets/tiles2.png").unwrap();
+		let atlas = renderer.load_texture("assets/sprites.png").unwrap();
 		let background = renderer.load_texture("assets/background.png").unwrap();
 
+		let style = 0;
+		let style_y = 22 * style + 1;
 		let sprites = Sprites {
 			pieces: [
-				Rect::new(20 * 6, 0, 20, 20),
-				Rect::new(20 * 2, 0, 20, 20),
-				Rect::new(20 * 3, 0, 20, 20),
-				Rect::new(20 * 0, 0, 20, 20),
-				Rect::new(20 * 1, 0, 20, 20),
-				Rect::new(20 * 4, 0, 20, 20),
-				Rect::new(20 * 5, 0, 20, 20),
-				Rect::new(20 * 5, 0, 20, 20),
+				Rect::new(22 * 0 + 1, style_y, 20, 20),
+				Rect::new(22 * 1 + 1, style_y, 20, 20),
+				Rect::new(22 * 2 + 1, style_y, 20, 20),
+				Rect::new(22 * 3 + 1, style_y, 20, 20),
+				Rect::new(22 * 4 + 1, style_y, 20, 20),
+				Rect::new(22 * 5 + 1, style_y, 20, 20),
+				Rect::new(22 * 6 + 1, style_y, 20, 20),
+				Rect::new(22 * 7 + 1, style_y, 20, 20),
 			],
-			bg: Rect::new(20 * 7, 0, 20, 20),
-			ghost: Rect::new(20 * 7, 0, 20, 20),
+			ghost: Rect::new(22 * 8 + 1, style_y, 20, 20),
+		};
+		let map = Map {
 			field_x: 160,
-			field_y: 127,
+			field_y: 97,
 		};
 
 		Graphics {
@@ -219,6 +289,7 @@ fn main() {
 			atlas: atlas,
 			background: background,
 			sprites: sprites,
+			map: map,
 		}
 	};
 
@@ -227,68 +298,115 @@ fn main() {
 
 	// Tetris game state
 	let mut state = tetrs::State::new(10, 22);
-	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new(), player: None };
+	let mut bot = tetrs::PlayI { score: 0.0, play: Vec::new(), player: None };
 	let mut play_i = 0;
 	let mut bag = tetrs::OfficialBag::default();
+	let speed = tetrs::Clock {
+		gravity: 40,
+		pl_move: 10,
+		pl_rotate: 10,
+	};
+	let mut timers = speed;
+	let mut action = tetrs::Play::Idle;
 
 	'quit: loop {
 		if !state.is_game_over() && state.player().is_none() {
 			use tetrs::Bag;
 			let next_piece = bag.next(state.well()).unwrap();
 			if !state.spawn(next_piece) {
-				play = tetrs::PlayI::play(&tetrs::Weights::default(), state.well(), *state.player().unwrap());
+				bot = tetrs::PlayI::play(&tetrs::Weights::default(), state.well(), *state.player().unwrap());
 				play_i = 0;
 			}
 		}
 
 		for e in events.poll_iter() {
-			use sdl2::event::Event::*;
-			use sdl2::keyboard::Keycode::*;
-			use sdl2::controller::Button;
-			match e {
-				Quit { .. } => break 'quit,
-				KeyDown { keycode, .. } => match keycode {
-					Some(Left) => { state.move_left(); },
-					Some(Right) => { state.move_right(); },
-					Some(Down) => { state.soft_drop(); },
-					Some(Up) => { state.rotate_cw(); },
-					Some(Space) => { state.hard_drop(); },
-					Some(LCtrl) => { state.rotate_ccw(); },
-					_ => (),
+			match Command::from_event(e) {
+				Some(Command::Quit) => break 'quit,
+				Some(Command::Down(play)) => {
+					action = play;
+					// println!("action={:?}", action);
 				},
-				ControllerButtonDown { button, .. } => match button {
-					Button::DPadLeft => { state.move_left(); },
-					Button::DPadRight => { state.move_right(); },
-					Button::DPadDown => { state.soft_drop(); },
-					Button::X => { state.rotate_ccw(); },
-					Button::Y => { state.hard_drop(); },
-					Button::B => { state.rotate_cw(); },
-					Button::A => { state.hard_drop(); },
-					_ => (),
+				Some(Command::Up(_)) => {
+					action = tetrs::Play::Idle;
 				},
-				e => {
-					// println!("event: {:?}", e);
+				None => {
 				},
-			};
+			}
+		}
+		// println!("{:?}", action);
+
+		// Decrement the timers
+		timers.gravity -= 1;
+		if timers.gravity == 0 {
+			timers.gravity = speed.gravity;
+			state.gravity();
+		}
+		if timers.pl_move > 0 {
+			timers.pl_move -= 1;
+		}
+		if timers.pl_rotate > 0 {
+			timers.pl_rotate -= 1;
+		}
+		use tetrs::Play::*;
+		match action {
+			MoveLeft => {
+				if timers.pl_move == 0 {
+					state.move_left();
+					timers.pl_move = speed.pl_move;
+				}
+			},
+			MoveRight => {
+				if timers.pl_move == 0 {
+					state.move_right();
+					timers.pl_move = speed.pl_move;
+				}
+			},
+			SoftDrop => {
+				if timers.pl_move == 0 {
+					state.soft_drop();
+					timers.pl_move = speed.pl_move;
+				}
+			},
+			HardDrop => {
+				if timers.pl_move == 0 {
+					state.hard_drop();
+					timers.pl_move = speed.pl_move;
+					action = tetrs::Play::Idle;
+				}
+			},
+			RotateCW => {
+				if timers.pl_rotate == 0 {
+					state.rotate_cw();
+					timers.pl_rotate = speed.pl_rotate;
+				}
+			},
+			RotateCCW => {
+				if timers.pl_rotate == 0 {
+					state.rotate_ccw();
+					timers.pl_rotate = speed.pl_rotate;
+				}
+			},
+			Idle => {},
 		}
 
-		if play_i < play.play.len() {
-			match play.play[play_i] {
-				tetrs::Play::Idle => (),
-				tetrs::Play::MoveLeft => { state.move_left(); },
-				tetrs::Play::MoveRight => { state.move_right(); },
-				tetrs::Play::RotateCW => { state.rotate_cw(); },
-				tetrs::Play::RotateCCW => { state.rotate_ccw(); },
-				tetrs::Play::SoftDrop => { state.soft_drop(); },
-				tetrs::Play::HardDrop => { state.hard_drop(); },
-			}
-			play_i += 1;
-		}
+
+		// if play_i < bot.play.len() {
+		// 	match bot.play[play_i] {
+		// 		tetrs::Play::Idle => (),
+		// 		tetrs::Play::MoveLeft => { state.move_left(); },
+		// 		tetrs::Play::MoveRight => { state.move_right(); },
+		// 		tetrs::Play::RotateCW => { state.rotate_cw(); },
+		// 		tetrs::Play::RotateCCW => { state.rotate_ccw(); },
+		// 		tetrs::Play::SoftDrop => { state.soft_drop(); },
+		// 		tetrs::Play::HardDrop => { state.hard_drop(); },
+		// 	}
+		// 	play_i += 1;
+		// }
 
 		state.clear_lines(|_| ());
 
 		draw(&mut cg, &state.scene());
 
-		thread::sleep(Duration::from_millis(20));
+		thread::sleep(Duration::from_millis(16));
 	}
 }
