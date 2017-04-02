@@ -10,8 +10,8 @@ pub use self::bot::{Weights, PlayI, Play};
 mod bag;
 pub use self::bag::{Bag, OfficialBag, BestBag, WorstBag};
 
-mod clock;
-pub use self::clock::Clock;
+mod input;
+pub use self::input::{Clock, Input};
 
 mod pt;
 pub use self::pt::Point;

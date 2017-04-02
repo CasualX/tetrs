@@ -10,7 +10,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Renderer, Texture};
 use sdl2::GameControllerSubsystem;
-use sdl2::controller::GameController;
+use sdl2::controller::{self, GameController};
 use sdl2::image::{LoadTexture, INIT_PNG};
 use sdl2::EventPump;
 use sdl2::event::Event;
@@ -264,7 +264,7 @@ fn main() {
 		let atlas = renderer.load_texture("assets/sprites.png").unwrap();
 		let background = renderer.load_texture("assets/background.png").unwrap();
 
-		let style = 0;
+		let style = 3;
 		let style_y = 22 * style + 1;
 		let sprites = Sprites {
 			pieces: [
@@ -303,8 +303,7 @@ fn main() {
 	let mut bag = tetrs::OfficialBag::default();
 	let speed = tetrs::Clock {
 		gravity: 40,
-		pl_move: 10,
-		pl_rotate: 10,
+		player: 8,
 	};
 	let mut timers = speed;
 	let mut action = tetrs::Play::Idle;
@@ -323,11 +322,27 @@ fn main() {
 			match Command::from_event(e) {
 				Some(Command::Quit) => break 'quit,
 				Some(Command::Down(play)) => {
-					action = play;
 					// println!("action={:?}", action);
+					match play {
+						tetrs::Play::RotateCW => {
+							state.rotate_cw();
+						},
+						tetrs::Play::RotateCCW => {
+							state.rotate_ccw();
+						},
+						tetrs::Play::HardDrop => {
+							state.hard_drop();
+						},
+						tetrs::Play::MoveLeft | tetrs::Play::MoveRight | tetrs::Play::SoftDrop => {
+							action = play;
+						},
+						_ => {},
+					};
 				},
-				Some(Command::Up(_)) => {
-					action = tetrs::Play::Idle;
+				Some(Command::Up(play)) => {
+					if play == tetrs::Play::MoveLeft || play == tetrs::Play::MoveRight || play == tetrs::Play::SoftDrop {
+						action = tetrs::Play::Idle;
+					}
 				},
 				None => {
 				},
@@ -339,69 +354,41 @@ fn main() {
 		timers.gravity -= 1;
 		if timers.gravity == 0 {
 			timers.gravity = speed.gravity;
-			state.gravity();
+			// state.gravity();
 		}
-		if timers.pl_move > 0 {
-			timers.pl_move -= 1;
+		if timers.player > 0 {
+			timers.player -= 1;
 		}
-		if timers.pl_rotate > 0 {
-			timers.pl_rotate -= 1;
-		}
-		use tetrs::Play::*;
-		match action {
-			MoveLeft => {
-				if timers.pl_move == 0 {
+		else {
+			match action {
+				tetrs::Play::MoveLeft => {
 					state.move_left();
-					timers.pl_move = speed.pl_move;
-				}
-			},
-			MoveRight => {
-				if timers.pl_move == 0 {
+					timers.player = speed.player;
+				},
+				tetrs::Play::MoveRight => {
 					state.move_right();
-					timers.pl_move = speed.pl_move;
-				}
-			},
-			SoftDrop => {
-				if timers.pl_move == 0 {
+					timers.player = speed.player;
+				},
+				tetrs::Play::SoftDrop => {
 					state.soft_drop();
-					timers.pl_move = speed.pl_move;
-				}
-			},
-			HardDrop => {
-				if timers.pl_move == 0 {
-					state.hard_drop();
-					timers.pl_move = speed.pl_move;
-					action = tetrs::Play::Idle;
-				}
-			},
-			RotateCW => {
-				if timers.pl_rotate == 0 {
-					state.rotate_cw();
-					timers.pl_rotate = speed.pl_rotate;
-				}
-			},
-			RotateCCW => {
-				if timers.pl_rotate == 0 {
-					state.rotate_ccw();
-					timers.pl_rotate = speed.pl_rotate;
-				}
-			},
-			Idle => {},
+					timers.player = speed.player;
+				},
+				_ => {},
+			}
 		}
 
-
-		// if play_i < bot.play.len() {
-		// 	match bot.play[play_i] {
-		// 		tetrs::Play::Idle => (),
-		// 		tetrs::Play::MoveLeft => { state.move_left(); },
-		// 		tetrs::Play::MoveRight => { state.move_right(); },
-		// 		tetrs::Play::RotateCW => { state.rotate_cw(); },
-		// 		tetrs::Play::RotateCCW => { state.rotate_ccw(); },
-		// 		tetrs::Play::SoftDrop => { state.soft_drop(); },
-		// 		tetrs::Play::HardDrop => { state.hard_drop(); },
-		// 	}
-		// 	play_i += 1;
-		// }
+		if play_i < bot.play.len() {
+			match bot.play[play_i] {
+				tetrs::Play::Idle => (),
+				tetrs::Play::MoveLeft => { state.move_left(); },
+				tetrs::Play::MoveRight => { state.move_right(); },
+				tetrs::Play::RotateCW => { state.rotate_cw(); },
+				tetrs::Play::RotateCCW => { state.rotate_ccw(); },
+				tetrs::Play::SoftDrop => { state.soft_drop(); },
+				tetrs::Play::HardDrop => { state.hard_drop(); },
+			}
+			play_i += 1;
+		}
 
 		state.clear_lines(|_| ());
 

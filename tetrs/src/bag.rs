@@ -59,7 +59,7 @@ impl<R: Rng> Bag for OfficialBag<R> {
 	}
 	fn peek(&self) -> &[Piece] {
 		let pos = self.pos as usize;
-		&self.bag[pos..pos + 1]
+		&self.bag[pos..pos + 7]
 	}
 }
 
