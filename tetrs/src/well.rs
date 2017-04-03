@@ -5,7 +5,7 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Piece, Point};
+use ::{Player, Piece, Point, srs_cw, srs_ccw};
 
 /// Maximum well height.
 ///
@@ -141,39 +141,25 @@ impl Well {
 		}
 		return false;
 	}
-	/// Hit test the player with wall kicks.
-	///
-	/// If a valid wall kick is found, the input player is modified with the new position and `true` is returned, `false` otherwise.
-	///
-	/// The actual wall kicks allowed don't follow any advanced rules, it just offsets the position and stops when a valid position is found.
-	///
-	/// The positions tested are `x - 1`, `x + 1`, `x - 2` and `x + 2` (the latter two are only for the I piece).
-	///
-	/// TODO! Figure out the flexible SRS wall kick system.
-	pub fn test_wall_kick(&self, player: &mut Player) -> bool {
-		player.pt.x -= 1;
-		if !self.test_player(*player) {
-			return false;
-		}
-		player.pt.x += 2;
-		if !self.test_player(*player) {
-			return false;
-		}
-		if player.piece == Piece::I {
-			player.pt.x -= 3;
-			if !self.test_player(*player) {
-				return false;
+	pub fn srs_cw(&self, player: Player) -> Player {
+		let data = srs_cw(player.piece, player.rot);
+		for &offset in data {
+			let dest = Player::new(player.piece, player.rot.cw(), player.pt + offset);
+			if !self.test_player(dest) {
+				return dest;
 			}
-			player.pt.x += 4;
-			if !self.test_player(*player) {
-				return false;
+		}
+		return player;
+	}
+	pub fn srs_ccw(&self, player: Player) -> Player {
+		let data = srs_ccw(player.piece, player.rot);
+		for &offset in data {
+			let dest = Player::new(player.piece, player.rot.ccw(), player.pt + offset);
+			if !self.test_player(dest) {
+				return dest;
 			}
-			player.pt.x -= 2;
 		}
-		else {
-			player.pt.x -= 1;
-		}
-		return true;
+		return player;
 	}
 	/// Traces a player down and returns where it will come to rest.
 	pub fn trace_down(&self, mut player: Player) -> Player {

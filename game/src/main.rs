@@ -377,18 +377,18 @@ fn main() {
 			}
 		}
 
-		if play_i < bot.play.len() {
-			match bot.play[play_i] {
-				tetrs::Play::Idle => (),
-				tetrs::Play::MoveLeft => { state.move_left(); },
-				tetrs::Play::MoveRight => { state.move_right(); },
-				tetrs::Play::RotateCW => { state.rotate_cw(); },
-				tetrs::Play::RotateCCW => { state.rotate_ccw(); },
-				tetrs::Play::SoftDrop => { state.soft_drop(); },
-				tetrs::Play::HardDrop => { state.hard_drop(); },
-			}
-			play_i += 1;
-		}
+		// if play_i < bot.play.len() {
+		// 	match bot.play[play_i] {
+		// 		tetrs::Play::Idle => (),
+		// 		tetrs::Play::MoveLeft => { state.move_left(); },
+		// 		tetrs::Play::MoveRight => { state.move_right(); },
+		// 		tetrs::Play::RotateCW => { state.rotate_cw(); },
+		// 		tetrs::Play::RotateCCW => { state.rotate_ccw(); },
+		// 		tetrs::Play::SoftDrop => { state.soft_drop(); },
+		// 		tetrs::Play::HardDrop => { state.hard_drop(); },
+		// 	}
+		// 	play_i += 1;
+		// }
 
 		state.clear_lines(|_| ());
 

@@ -10,7 +10,7 @@ pub enum Rot { Zero, One, Two, Three }
 
 impl Rot {
 	pub fn cw(self) -> Rot { unsafe {
-		mem::transmute((self as u8 + 1) & 3)
+		mem::transmute((self as u8).wrapping_add(1) & 3)
 	}}
 	pub fn ccw(self) -> Rot { unsafe {
 		mem::transmute((self as u8).wrapping_sub(1) & 3)

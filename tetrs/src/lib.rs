@@ -22,6 +22,9 @@ pub use self::piece::{Mesh, Piece};
 mod rot;
 pub use self::rot::Rot;
 
+mod srs;
+pub use self::srs::{SrsData, srs_cw, srs_ccw};
+
 mod player;
 pub use self::player::Player;
 

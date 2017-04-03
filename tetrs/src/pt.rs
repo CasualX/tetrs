@@ -2,6 +2,8 @@
 Point.
 */
 
+use ::std::ops;
+
 /// Point.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(C)]
@@ -15,6 +17,16 @@ impl Point {
 		Point {
 			x: x,
 			y: y,
+		}
+	}
+}
+
+impl ops::Add for Point {
+	type Output = Point;
+	fn add(self, rhs: Point) -> Point {
+		Point {
+			x: self.x + rhs.x,
+			y: self.y + rhs.y,
 		}
 	}
 }

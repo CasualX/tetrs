@@ -47,7 +47,15 @@ impl Input {
 
 	/// Fast forward to the next time new user input will be accepted.
 	pub fn ffw(&mut self) -> usize {
-		0
+		// Advance the timer to the next player input
+		self.timers.gravity -= self.timers.player;
+		// Fixup gravity timer
+		let mut drops = 0;
+		while self.timers.gravity < 0 {
+			self.timers.gravity += self.speed.gravity;
+			drops += 1;
+		}
+		drops
 	}
 
 	pub fn tick(&mut self, state: &mut State) {

@@ -76,14 +76,9 @@ impl State {
 	/// If there's not enough space a wall kick is attempted.
 	pub fn rotate_cw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
-		let mut next = player.rotate_cw();
-		if !self.well.test_player(next) || !self.well.test_wall_kick(&mut next) {
-			self.player = Some(next);
-			true
-		}
-		else {
-			false
-		}
+		let next = self.well.srs_cw(player);
+		self.player = Some(next);
+		return player.pt != next.pt;
 	}
 	/// Rotates the player counter-clockwise.
 	///
@@ -92,14 +87,9 @@ impl State {
 	/// If there's not enough space a wall kick is attempted.
 	pub fn rotate_ccw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
-		let mut next = player.rotate_ccw();
-		if !self.well.test_player(next) || !self.well.test_wall_kick(&mut next) {
-			self.player = Some(next);
-			true
-		}
-		else {
-			false
-		}
+		let next = self.well.srs_ccw(player);
+		self.player = Some(next);
+		return player.pt != next.pt;
 	}
 	/// Drops the player down one block.
 	///

@@ -219,15 +219,15 @@ impl PlayI {
 				},
 				Play::MoveRight => {
 					path.last_mut().unwrap().0 = Play::RotateCW;
-					let mut next = player.rotate_cw();
-					if !visit(next) && (!well.test_player(next) || !well.test_wall_kick(&mut next)) {
+					let next = well.srs_cw(player);
+					if !visit(next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::RotateCW => {
 					path.last_mut().unwrap().0 = Play::RotateCCW;
-					let mut next = player.rotate_ccw();
-					if !visit(next) && (!well.test_player(next) || !well.test_wall_kick(&mut next)) {
+					let next = well.srs_ccw(player);
+					if !visit(next) {
 						path.push((Play::Idle, next));
 					}
 				},
