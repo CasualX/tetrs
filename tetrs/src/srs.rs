@@ -90,3 +90,26 @@ pub fn srs_ccw(piece: Piece, rot: Rot) -> &'static [Point; 5] {
 	let src = if piece == Piece::I { &SRS_DATA_I } else { &SRS_DATA_JLSTZ };
 	&src.ccw[rot as u8 as usize]
 }
+
+#[cfg(test)]
+mod tests {
+	use ::{Well, Player, Piece, Rot, Point};
+
+	#[test]
+	fn wall_kick_example() {
+		let well = Well::from_data(10, &[
+			0b0000000000,
+			0b0000110000,
+			0b0000011100,
+			0b0000001111,
+			0b0111000111,
+			0b1100001111,
+			0b1111001111,
+			0b1111101111,
+		]);
+		let initial = Player::new(Piece::J, Rot::Zero, Point::new(2, 5));
+		let player = well.srs_ccw(initial);
+		let expected = Player::new(Piece::J, Rot::Three, Point::new(3, 3));
+		assert_eq!(expected, player);
+	}
+}

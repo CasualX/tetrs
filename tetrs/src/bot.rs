@@ -329,8 +329,9 @@ mod tests {
 			0b1110111111,
 			0b1111111111,
 		]);
-		let (heights_sum, lines, holes_sum, caves_sum, bumpiness, stacks) = Weights::crunch(&well);
+		let (heights_sum, height_max, lines, holes_sum, caves_sum, bumpiness, stacks) = Weights::crunch(&well);
 		assert_eq!(28, heights_sum);
+		assert_eq!(4, height_max);
 		assert_eq!(2, lines);
 		assert_eq!(2, holes_sum);
 		assert_eq!(0, caves_sum);
