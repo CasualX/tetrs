@@ -6,6 +6,9 @@ Based on https://tetris.wiki/SRS
 
 use ::{Point, Piece, Rot};
 
+/// SRS offset data.
+///
+/// When the player desires to rotate the piece, this table is consulted for wall kicks.
 pub struct SrsData {
 	cw: [[Point; 5]; 4],
 	ccw: [[Point; 5]; 4],
@@ -29,6 +32,7 @@ macro_rules! srs {
 	}
 }
 
+/// SRS offsets for all but the I piece.
 pub static SRS_DATA_JLSTZ: SrsData = SrsData {
 	cw: srs! {
 		( 0, 0) 	(-1, 0) 	(-1, 1) 	( 0,-2) 	(-1,-2)
@@ -44,6 +48,7 @@ pub static SRS_DATA_JLSTZ: SrsData = SrsData {
 	},
 };
 
+/// SRS offsets for the I piece.
 pub static SRS_DATA_I: SrsData = SrsData {
 	cw: srs! {
 		( 0, 0) 	(-2, 0) 	( 1, 0) 	(-2,-1) 	( 1, 2)
@@ -60,6 +65,7 @@ pub static SRS_DATA_I: SrsData = SrsData {
 };
 
 /*
+/// SRS offsets for the I piece under Arika rules.
 pub static SRS_DATA_ARIKA: SrsData = SrsData {
 	cw: srs! {
 		( 0, 0) 	(-2, 0) 	( 1, 0) 	( 1, 2) 	(-2,-1)

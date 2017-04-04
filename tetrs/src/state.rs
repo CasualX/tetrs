@@ -78,7 +78,7 @@ impl State {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = self.well.srs_cw(player);
 		self.player = Some(next);
-		return player.pt != next.pt;
+		player != next
 	}
 	/// Rotates the player counter-clockwise.
 	///
@@ -89,7 +89,7 @@ impl State {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = self.well.srs_ccw(player);
 		self.player = Some(next);
-		return player.pt != next.pt;
+		player != next
 	}
 	/// Drops the player down one block.
 	///

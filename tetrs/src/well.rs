@@ -5,7 +5,7 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Piece, Point, srs_cw, srs_ccw};
+use ::{Player, Point, srs_cw, srs_ccw};
 
 /// Maximum well height.
 ///
@@ -13,6 +13,7 @@ use ::{Player, Piece, Point, srs_cw, srs_ccw};
 ///
 /// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
 pub const MAX_HEIGHT: usize = 23;
+
 /// Maxium well width.
 ///
 /// If this is changed, don't forget to update the documentation for `Well::new`.
