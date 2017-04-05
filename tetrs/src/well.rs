@@ -399,7 +399,7 @@ mod tests {
 
 		let p1 = Player::new(Piece::L, Rot::Zero, Point::new(2, 1));
 		let p2 = Player::new(Piece::O, Rot::Zero, Point::new(-1, 2));
-		let p3 = Player::new(Piece::I, Rot::One, Point::new(7, 3));
+		let p3 = Player::new(Piece::I, Rot::Right, Point::new(7, 3));
 
 		well.etch_player(p1);
 		well.etch_player(p2);
@@ -424,15 +424,15 @@ mod tests {
 		let well = well();
 		// Within the field bounds
 		assert!(!well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
-		assert!(!well.test_player(Player::new(Piece::J, Rot::Three, Point::new(5, 2))));
+		assert!(!well.test_player(Player::new(Piece::J, Rot::Left, Point::new(5, 2))));
 		// Clip left wall
 		assert!(well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
 		// Clip with existing pieces
 		assert!(well.test_player(Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
 		// Clip right wall
-		assert!(well.test_player(Player::new(Piece::O, Rot::One, Point::new(9, 1))));
+		assert!(well.test_player(Player::new(Piece::O, Rot::Right, Point::new(9, 1))));
 		// Clip the bottom
-		assert!(well.test_player(Player::new(Piece::J, Rot::Three, Point::new(5, 1))));
+		assert!(well.test_player(Player::new(Piece::J, Rot::Left, Point::new(5, 1))));
 	}
 
 	#[test]

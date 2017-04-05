@@ -123,7 +123,7 @@ mod tests {
 		]);
 		let initial = Player::new(Piece::J, Rot::Zero, Point::new(2, 5));
 		let player = srs_ccw(&well, initial);
-		let expected = Player::new(Piece::J, Rot::Three, Point::new(3, 3));
+		let expected = Player::new(Piece::J, Rot::Left, Point::new(3, 3));
 		assert_eq!(expected, player);
 	}
 }

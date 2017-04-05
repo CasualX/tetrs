@@ -4,14 +4,26 @@ Piece rotation.
 
 use ::std::mem;
 
+/// Rotation state of a piece.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u8)]
-pub enum Rot { Zero, One, Two, Three }
+pub enum Rot {
+	/// Spawn state.
+	Zero,
+	/// Clockwise rotation ("right") from spawn.
+	Right,
+	/// 2 Successive rotations in either direction from spawn.
+	Two,
+	/// Counter-clockwise ("left") rotation from spawn.
+	Left,
+}
 
 impl Rot {
+	/// Rotate clockwise.
 	pub fn cw(self) -> Rot { unsafe {
 		mem::transmute((self as u8).wrapping_add(1) & 3)
 	}}
+	/// Rotate counter-clockwise.
 	pub fn ccw(self) -> Rot { unsafe {
 		mem::transmute((self as u8).wrapping_sub(1) & 3)
 	}}
@@ -29,7 +41,7 @@ mod tests {
 
 	#[test]
 	fn rotate() {
-		assert_eq!(Rot::One, Rot::Zero.cw());
-		assert_eq!(Rot::Three, Rot::Zero.ccw());
+		assert_eq!(Rot::Right, Rot::Zero.cw());
+		assert_eq!(Rot::Left, Rot::Zero.ccw());
 	}
 }
