@@ -68,6 +68,7 @@ impl Player {
 		}
 	}
 	pub fn sprite(self) -> &'static Sprite {
-		&self.piece.mesh().data[self.rot as u8 as usize]
+		use ::{Rules, TheRules};
+		TheRules.piece_sprite(self.piece, self.rot)
 	}
 }

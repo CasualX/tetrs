@@ -39,7 +39,7 @@ impl Scene {
 	/// Draws the player and its ghost into the scene.
 	pub fn draw(&mut self, player: Player, tile_ty: TileTy) {
 		// Get the unperturbed mesh
-		let sprite = &player.piece.mesh().data[player.rot as u8 as usize];
+		let sprite = player.sprite();
 		let mut part_id = 0;
 		// Render the tiles to the scene
 		for y in 0..4 {

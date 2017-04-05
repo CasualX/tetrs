@@ -2,26 +2,26 @@
 Customize the rules for the tetris game.
 */
 
-use ::{Piece, Rot, Point, srs_data_cw, srs_data_ccw};
+use ::{Piece, Rot, Point, Sprite, srs_data_cw, srs_data_ccw};
 
 /// Tetris rule customization.
 pub trait Rules: Copy {
-	/// The 4x4 mesh for the given piece and rotation.
-	fn piece_mesh(&self, piece: Piece, rot: Rot) -> [u8; 4];
-	fn rotate_cw_offsets(&self, piece: Piece, rot: Rot) -> &[Point];
-	fn rotate_ccw_offsets(&self, piece: Piece, rot: Rot) -> &[Point];
+	/// The 4x4 sprite for the given piece and rotation.
+	fn piece_sprite(&self, piece: Piece, rot: Rot) -> &'static Sprite;
+	fn rotate_cw_kicks(&self, piece: Piece, rot: Rot) -> &'static [Point];
+	fn rotate_ccw_kicks(&self, piece: Piece, rot: Rot) -> &'static [Point];
 }
 
 #[derive(Copy, Clone)]
 pub struct TheRules;
 impl Rules for TheRules {
-	fn piece_mesh(&self, piece: Piece, rot: Rot) -> [u8; 4] {
-		DATA[piece as u8 as usize].data[rot as u8 as usize]
+	fn piece_sprite(&self, piece: Piece, rot: Rot) -> &'static Sprite {
+		&DATA[piece as u8 as usize].data[rot as u8 as usize]
 	}
-	fn rotate_cw_offsets(&self, piece: Piece, rot: Rot) -> &[Point] {
+	fn rotate_cw_kicks(&self, piece: Piece, rot: Rot) -> &'static [Point] {
 		srs_data_cw(piece, rot)
 	}
-	fn rotate_ccw_offsets(&self, piece: Piece, rot: Rot) -> &[Point] {
+	fn rotate_ccw_kicks(&self, piece: Piece, rot: Rot) -> &'static [Point] {
 		srs_data_ccw(piece, rot)
 	}
 }
@@ -29,7 +29,7 @@ impl Rules for TheRules {
 //----------------------------------------------------------------
 
 struct Mesh {
-	pub data: [[u8; 4]; 4],
+	pub data: [Sprite; 4],
 }
 
 macro_rules! b {
@@ -58,10 +58,10 @@ macro_rules! data {
 		$a41:tt $a42:tt $a43:tt $a44:tt
 	) => {
 		[
-			[b!($a11), b!($a21), b!($a31), b!($a41)],
-			[b!($a12), b!($a22), b!($a32), b!($a42)],
-			[b!($a13), b!($a23), b!($a33), b!($a43)],
-			[b!($a14), b!($a24), b!($a34), b!($a44)],
+			Sprite { pix: [b!($a11), b!($a21), b!($a31), b!($a41)] },
+			Sprite { pix: [b!($a12), b!($a22), b!($a32), b!($a42)] },
+			Sprite { pix: [b!($a13), b!($a23), b!($a33), b!($a43)] },
+			Sprite { pix: [b!($a14), b!($a24), b!($a34), b!($a44)] },
 		]
 	};
 }
