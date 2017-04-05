@@ -17,13 +17,13 @@ mod pt;
 pub use self::pt::Point;
 
 mod piece;
-pub use self::piece::{Piece};
+pub use self::piece::{Piece, Sprite};
 
 mod rot;
 pub use self::rot::Rot;
 
 mod srs;
-pub use self::srs::{SrsData, srs_cw, srs_ccw};
+pub use self::srs::{SrsData, srs_cw, srs_ccw, srs_data_cw, srs_data_ccw};
 
 mod player;
 pub use self::player::Player;

@@ -5,7 +5,7 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Point, srs_cw, srs_ccw};
+use ::{Player, Point, Sprite};
 
 /// Maximum well height.
 ///
@@ -90,50 +90,44 @@ impl Well {
 	pub fn lines(&self) -> &[Line] {
 		&self.field[..self.height as usize]
 	}
-	/// Hit tests the player against the field.
-	///
-	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
-	pub fn test_player(&self, player: Player) -> bool {
+	pub fn test(&self, sprite: &Sprite, pt: Point) -> bool {
 		// Early reject out of bounds
-		if player.pt.x < (0 - 4) || player.pt.x >= self.width || player.pt.y < 0 {
+		if pt.x < (0 - 4) || pt.x >= self.width || pt.y < 0 {
 			return true;
 		}
-		if player.pt.y >= self.height + 4 {
+		if pt.y >= self.height + 4 {
 			return false;
 		}
 
-		// Get the unperturbed mesh
-		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
-
 		// For clipping left/right walls
-		let line_mask = if player.pt.x < 0 {
-			self.line_mask() << (-player.pt.x) as usize
+		let line_mask = if pt.x < 0 {
+			self.line_mask() << (-pt.x) as usize
 		}
 		else {
-			self.line_mask() >> player.pt.x as usize
+			self.line_mask() >> pt.x as usize
 		};
 
 		// The compiler actually unrolls and splits this loop, pretty slick :)
 		for y in 0..4 {
 			// Check if part is sticking out of a wall
-			if (mesh[y as usize] as Line) & !line_mask != 0 {
+			if (sprite.pix[y as usize] as Line) & !line_mask != 0 {
 				return true;
 			}
-			let row = player.pt.y - y;
+			let row = pt.y - y;
 			// If this row is below the floor
 			if row < 0 {
-				if mesh[y as usize] != 0 {
+				if sprite.pix[y as usize] != 0 {
 					return true;
 				}
 			}
 			// If this row is below the ceiling
 			else if row < self.height {
-				// Render the mesh for this line
-				let cg_line = if player.pt.x < 0 {
-					(mesh[y as usize] as Line) >> (-player.pt.x) as usize
+				// Render the sprite for this line
+				let cg_line = if pt.x < 0 {
+					(sprite.pix[y as usize] as Line) >> (-pt.x) as usize
 				}
 				else {
-					(mesh[y as usize] as Line) << player.pt.x as usize
+					(sprite.pix[y as usize] as Line) << pt.x as usize
 				};
 				if cg_line & self.field[row as usize] != 0 {
 					return true;
@@ -142,55 +136,49 @@ impl Well {
 		}
 		return false;
 	}
-	pub fn srs_cw(&self, player: Player) -> Player {
-		let data = srs_cw(player.piece, player.rot);
-		for &offset in data {
-			let dest = Player::new(player.piece, player.rot.cw(), player.pt + offset);
-			if !self.test_player(dest) {
-				return dest;
-			}
-		}
-		return player;
+	/// Hit tests the player against the field.
+	///
+	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
+	pub fn test_player(&self, player: Player) -> bool {
+		let sprite = player.sprite();
+		self.test(sprite, player.pt)
 	}
-	pub fn srs_ccw(&self, player: Player) -> Player {
-		let data = srs_ccw(player.piece, player.rot);
-		for &offset in data {
-			let dest = Player::new(player.piece, player.rot.ccw(), player.pt + offset);
-			if !self.test_player(dest) {
-				return dest;
-			}
-		}
-		return player;
+	#[inline]
+	pub fn wall_kick(&self, sprite: &Sprite, kicks: &[Point], pt: Point) -> Option<Point> {
+		kicks.iter()
+			.map(|&offset| pt + offset)
+			.find(|&pt| !self.test(sprite, pt))
 	}
-	/// Traces a player down and returns where it will come to rest.
-	pub fn trace_down(&self, mut player: Player) -> Player {
+	pub fn trace_down(&self, sprite: &Sprite, mut pt: Point) -> Point {
 		loop {
-			let next = player.move_down();
-			if self.test_player(next) {
-				return player;
+			let next = Point::new(pt.x, pt.y - 1);
+			if self.test(sprite, next) {
+				return pt;
 			}
-			player = next;
+			pt = next;
 		}
 	}
-	/// Etch the player into the field.
-	pub fn etch(&mut self, player: Player) {
-		// Grab the mesh for this rotation
-		let mesh = player.piece.mesh().data[player.rot as u8 as usize];
-		// Etch the 4x4 mask into the field
+	pub fn etch(&mut self, sprite: &Sprite, pt: Point) {
+		// Etch the sprite into the field
 		for y in 0..4 {
 			// Clip the affected row to the field
-			let row = player.pt.y - y;
+			let row = pt.y - y;
 			if row >= 0 && row < self.height {
-				// Render the mesh for this line
-				let line_mask = if player.pt.x < 0 {
-					(mesh[y as usize] as Line) >> (-player.pt.x) as usize
+				// Render the sprite for this line
+				let line_mask = if pt.x < 0 {
+					(sprite.pix[y as usize] as Line) >> (-pt.x) as usize
 				}
 				else {
-					(mesh[y as usize] as Line) << player.pt.x as usize
+					(sprite.pix[y as usize] as Line) << pt.x as usize
 				};
 				self.field[row as usize] |= line_mask;
 			}
 		}
+	}
+	/// Etch the player into the field.
+	pub fn etch_player(&mut self, player: Player) {
+		let sprite = player.sprite();
+		self.etch(sprite, player.pt)
 	}
 	/// Gets a line with all columns set.
 	pub fn line_mask(&self) -> Line {
@@ -413,9 +401,9 @@ mod tests {
 		let p2 = Player::new(Piece::O, Rot::Zero, Point::new(-1, 2));
 		let p3 = Player::new(Piece::I, Rot::One, Point::new(7, 3));
 
-		well.etch(p1);
-		well.etch(p2);
-		well.etch(p3);
+		well.etch_player(p1);
+		well.etch_player(p2);
+		well.etch_player(p3);
 		println!("\n{}", well);
 
 		well

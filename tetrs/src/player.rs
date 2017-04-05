@@ -1,5 +1,5 @@
 
-use ::{Piece, Rot, Point};
+use ::{Piece, Rot, Point, Sprite};
 
 /// The player.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -66,5 +66,8 @@ impl Player {
 			rot: self.rot.ccw(),
 			pt: self.pt,
 		}
+	}
+	pub fn sprite(self) -> &'static Sprite {
+		&self.piece.mesh().data[self.rot as u8 as usize]
 	}
 }

@@ -3,7 +3,11 @@ use ::std::mem;
 
 /// Represents the shapes of a piece.
 pub struct Mesh {
-	pub data: [[u8; 4]; 4],
+	pub data: [Sprite; 4],
+}
+
+pub struct Sprite {
+	pub pix: [u8; 4],
 }
 
 /// All the valid tetrominoes.
@@ -50,10 +54,10 @@ macro_rules! data {
 		$a41:tt $a42:tt $a43:tt $a44:tt
 	) => {
 		[
-			[b!($a11), b!($a21), b!($a31), b!($a41)],
-			[b!($a12), b!($a22), b!($a32), b!($a42)],
-			[b!($a13), b!($a23), b!($a33), b!($a43)],
-			[b!($a14), b!($a24), b!($a34), b!($a44)],
+			Sprite { pix: [b!($a11), b!($a21), b!($a31), b!($a41)] },
+			Sprite { pix: [b!($a12), b!($a22), b!($a32), b!($a42)] },
+			Sprite { pix: [b!($a13), b!($a23), b!($a33), b!($a43)] },
+			Sprite { pix: [b!($a14), b!($a24), b!($a34), b!($a44)] },
 		]
 	};
 }

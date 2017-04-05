@@ -2,7 +2,7 @@
 Customize the rules for the tetris game.
 */
 
-use ::{Piece, Rot, Point, srs_cw, srs_ccw};
+use ::{Piece, Rot, Point, srs_data_cw, srs_data_ccw};
 
 /// Tetris rule customization.
 pub trait Rules: Copy {
@@ -19,10 +19,10 @@ impl Rules for TheRules {
 		DATA[piece as u8 as usize].data[rot as u8 as usize]
 	}
 	fn rotate_cw_offsets(&self, piece: Piece, rot: Rot) -> &[Point] {
-		srs_cw(piece, rot)
+		srs_data_cw(piece, rot)
 	}
 	fn rotate_ccw_offsets(&self, piece: Piece, rot: Rot) -> &[Point] {
-		srs_ccw(piece, rot)
+		srs_data_ccw(piece, rot)
 	}
 }
 

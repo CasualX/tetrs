@@ -4,7 +4,7 @@ Simple player bot.
 
 use ::std::{ops, f64};
 
-use ::{Well, Rot, Piece, Player, Point, MAX_WIDTH, MAX_HEIGHT};
+use ::{Well, Rot, Piece, Player, Point, srs_cw, srs_ccw, MAX_WIDTH, MAX_HEIGHT};
 
 /// Weights for evaluating well.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -192,7 +192,7 @@ impl PlayI {
 						}
 						else {
 							let mut well = *well;
-							well.etch(player);
+							well.etch_player(player);
 							let score = weights.eval(&well);
 							if score > best.score {
 								best.score = score;
@@ -219,14 +219,14 @@ impl PlayI {
 				},
 				Play::MoveRight => {
 					path.last_mut().unwrap().0 = Play::RotateCW;
-					let next = well.srs_cw(player);
+					let next = srs_cw(well, player);
 					if !visit(next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::RotateCW => {
 					path.last_mut().unwrap().0 = Play::RotateCCW;
-					let next = well.srs_ccw(player);
+					let next = srs_ccw(well, player);
 					if !visit(next) {
 						path.push((Play::Idle, next));
 					}
@@ -300,7 +300,7 @@ impl PlayI {
 			// Finally try moving one down, and eval well
 			let player_down = if well.test_player(player.move_down()) {
 				let mut well = *well;
-				well.etch(player);
+				well.etch_player(player);
 				weights.eval(&well)
 			}
 			else {

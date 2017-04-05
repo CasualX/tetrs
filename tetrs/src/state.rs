@@ -1,5 +1,5 @@
 
-use ::{Player, Well, Piece, Rot, Point, Scene, TileTy};
+use ::{Player, Well, Piece, Rot, Point, Scene, TileTy, srs_cw, srs_ccw};
 
 /// Game state of player and well.
 #[derive(Clone, Debug)]
@@ -76,7 +76,7 @@ impl State {
 	/// If there's not enough space a wall kick is attempted.
 	pub fn rotate_cw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
-		let next = self.well.srs_cw(player);
+		let next = srs_cw(&self.well, player);
 		self.player = Some(next);
 		player != next
 	}
@@ -87,7 +87,7 @@ impl State {
 	/// If there's not enough space a wall kick is attempted.
 	pub fn rotate_ccw(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
-		let next = self.well.srs_ccw(player);
+		let next = srs_ccw(&self.well, player);
 		self.player = Some(next);
 		player != next
 	}
@@ -112,7 +112,7 @@ impl State {
 	/// Returns `false` if no player.
 	pub fn hard_drop(&mut self) -> bool {
 		if let Some(player) = self.player {
-			self.player = Some(self.well.trace_down(player));
+			self.player = Some(self.trace_down(player));
 			self.lock();
 			true
 		}
@@ -149,7 +149,7 @@ impl State {
 	/// Etch the player to the well and kill it.
 	pub fn lock(&mut self) {
 		if let Some(pl) = self.player {
-			self.well.etch(pl);
+			self.well.etch_player(pl);
 			self.scene.draw(pl, TileTy::Field);
 			self.player = None;
 		}
@@ -180,11 +180,19 @@ impl State {
 		let mut scene = self.scene.clone();
 		if let Some(&player) = self.player() {
 			// Draw the ghost where the player will fall
-			let ghost = self.well.trace_down(player);
+			let ghost = self.trace_down(player);
 			scene.draw(ghost, TileTy::Ghost);
 			// Draw the player
 			scene.draw(player, TileTy::Player);
 		}
 		scene
+	}
+}
+
+impl State {
+	fn trace_down(&self, player: Player) -> Player {
+		let sprite = player.sprite();
+		let pt = self.well.trace_down(sprite, player.pt);
+		Player::new(player.piece, player.rot, pt)
 	}
 }

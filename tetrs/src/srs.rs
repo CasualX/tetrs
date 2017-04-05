@@ -4,7 +4,7 @@ Super Rotation System, or SRS for rotating tetrominoes.
 Based on https://tetris.wiki/SRS
 */
 
-use ::{Point, Piece, Rot};
+use ::{Point, Piece, Rot, Well, Player};
 
 /// SRS offset data.
 ///
@@ -82,17 +82,31 @@ pub static SRS_DATA_ARIKA: SrsData = SrsData {
 };
 */
 
-pub fn srs_cw(piece: Piece, rot: Rot) -> &'static [Point; 5] {
+pub fn srs_data_cw(piece: Piece, rot: Rot) -> &'static [Point; 5] {
 	let src = if piece == Piece::I { &SRS_DATA_I } else { &SRS_DATA_JLSTZ };
 	&src.cw[rot as u8 as usize]
 }
-pub fn srs_ccw(piece: Piece, rot: Rot) -> &'static [Point; 5] {
+pub fn srs_data_ccw(piece: Piece, rot: Rot) -> &'static [Point; 5] {
 	let src = if piece == Piece::I { &SRS_DATA_I } else { &SRS_DATA_JLSTZ };
 	&src.ccw[rot as u8 as usize]
 }
 
+pub fn srs_cw(well: &Well, player: Player) -> Player {
+	let rotated = player.rotate_cw();
+	let sprite = rotated.sprite();
+	let kicks = srs_data_cw(player.piece, player.rot);
+	well.wall_kick(sprite, kicks, rotated.pt).map(|pt| Player::new(rotated.piece, rotated.rot, pt)).unwrap_or(player)
+}
+pub fn srs_ccw(well: &Well, player: Player) -> Player {
+	let rotated = player.rotate_ccw();
+	let sprite = rotated.sprite();
+	let kicks = srs_data_ccw(player.piece, player.rot);
+	well.wall_kick(sprite, kicks, rotated.pt).map(|pt| Player::new(rotated.piece, rotated.rot, pt)).unwrap_or(player)
+}
+
 #[cfg(test)]
 mod tests {
+	use super::*;
 	use ::{Well, Player, Piece, Rot, Point};
 
 	#[test]
@@ -108,7 +122,7 @@ mod tests {
 			0b1111101111,
 		]);
 		let initial = Player::new(Piece::J, Rot::Zero, Point::new(2, 5));
-		let player = well.srs_ccw(initial);
+		let player = srs_ccw(&well, initial);
 		let expected = Player::new(Piece::J, Rot::Three, Point::new(3, 3));
 		assert_eq!(expected, player);
 	}
