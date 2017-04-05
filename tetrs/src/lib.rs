@@ -17,7 +17,7 @@ mod pt;
 pub use self::pt::Point;
 
 mod piece;
-pub use self::piece::{Mesh, Piece};
+pub use self::piece::{Piece};
 
 mod rot;
 pub use self::rot::Rot;
@@ -39,3 +39,6 @@ pub use self::scene::{Scene};
 
 mod state;
 pub use self::state::{State};
+
+mod rules;
+pub use self::rules::{Rules, TheRules};
