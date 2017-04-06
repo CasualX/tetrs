@@ -90,6 +90,7 @@ impl Well {
 	pub fn lines(&self) -> &[Line] {
 		&self.field[..self.height as usize]
 	}
+	/// Tests if the sprite collides with with the well.
 	pub fn test(&self, sprite: &Sprite, pt: Point) -> bool {
 		// Early reject out of bounds
 		if pt.x < (0 - 4) || pt.x >= self.width || pt.y < 0 {
@@ -136,12 +137,16 @@ impl Well {
 		}
 		return false;
 	}
+	/// Tests a list of kicks and returns the first point where the sprite doesn't collide with the well.
+	///
+	/// Results in `None` if all kicks collide with the well.
 	#[inline]
 	pub fn wall_kick(&self, sprite: &Sprite, kicks: &[Point], pt: Point) -> Option<Point> {
 		kicks.iter()
 			.map(|&offset| pt + offset)
 			.find(|&pt| !self.test(sprite, pt))
 	}
+	/// Traces the sprite down and returns the lowest point where it does not collide with the well.
 	pub fn trace_down(&self, sprite: &Sprite, mut pt: Point) -> Point {
 		loop {
 			let next = Point::new(pt.x, pt.y - 1);
@@ -151,6 +156,7 @@ impl Well {
 			pt = next;
 		}
 	}
+	/// Etches the sprite into the well.
 	pub fn etch(&mut self, sprite: &Sprite, pt: Point) {
 		// Etch the sprite into the field
 		for y in 0..4 {
@@ -210,6 +216,9 @@ impl Well {
 }
 
 impl Well {
+	/// Counts the number of holes.
+	///
+	/// A hole is defined as an empty block that is not reachable from the top of the well.
 	pub fn count_holes(&self) -> i32 {
 		let mut well = *self;
 		let seed = Point::new(self.width >> 1, self.height - 1);
