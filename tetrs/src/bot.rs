@@ -4,7 +4,7 @@ Simple player bot.
 
 use ::std::{ops, f64};
 
-use ::{Well, Rot, Piece, Player, Point, srs_cw, srs_ccw, MAX_WIDTH, MAX_HEIGHT};
+use ::{Well, Rot, Piece, Player, Point, srs_cw, srs_ccw, test_player, MAX_WIDTH, MAX_HEIGHT};
 
 /// Weights for evaluating well.
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -187,12 +187,12 @@ impl PlayI {
 					path.last_mut().unwrap().0 = Play::SoftDrop;
 					let next = player.move_down();
 					if !visit(next) {
-						if !well.test_player(next) {
+						if !test_player(well, next) {
 							path.push((Play::Idle, next));
 						}
 						else {
 							let mut well = *well;
-							well.etch_player(player);
+							etch_player(&mut well, player);
 							let score = weights.eval(&well);
 							if score > best.score {
 								best.score = score;
@@ -206,14 +206,14 @@ impl PlayI {
 				Play::SoftDrop => {
 					path.last_mut().unwrap().0 = Play::MoveLeft;
 					let next = player.move_left();
-					if !visit(next) && !well.test_player(next) {
+					if !visit(next) && !test_player(well, next) {
 						path.push((Play::Idle, next));
 					}
 				},
 				Play::MoveLeft => {
 					path.last_mut().unwrap().0 = Play::MoveRight;
 					let next = player.move_right();
-					if !visit(next) && !well.test_player(next) {
+					if !visit(next) && !test_player(well, next) {
 						path.push((Play::Idle, next));
 					}
 				},
@@ -289,7 +289,7 @@ impl PlayI {
 			visited[i] = true;
 			// Test if this is a valid move
 			// FIXME! Does not evaluate wall-kicks!
-			if well.test_player(player) {
+			if test_player(well, player) {
 				return f64::NEG_INFINITY;
 			}
 			// Try all possible moves from this location
@@ -298,9 +298,9 @@ impl PlayI {
 			let left = rec(visited, weights, well, player.move_left());
 			let right = rec(visited, weights, well, player.move_right());
 			// Finally try moving one down, and eval well
-			let player_down = if well.test_player(player.move_down()) {
+			let player_down = if test_player(well, player.move_down()) {
 				let mut well = *well;
-				well.etch_player(player);
+				etch_player(&mut well, player);
 				weights.eval(&well)
 			}
 			else {
@@ -313,6 +313,11 @@ impl PlayI {
 		let start = Player::new(piece, Rot::Zero, Point::new(well.width() / 2 - 2, well.height() + 3));
 		rec(&mut visited, weights, well, start)
 	}
+}
+
+fn etch_player(well: &mut Well, player: Player) {
+	let sprite = player.sprite();
+	well.etch(sprite, player.pt)
 }
 
 #[cfg(test)]

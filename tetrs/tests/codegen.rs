@@ -17,7 +17,8 @@ fn main() {
 		0b1111111111,
 	]);
 	extern_tag("extern_tag1");
-	black_box(well.test_player(tetrs::Player::new(tetrs::Piece::O, tetrs::Rot::Zero, tetrs::Point::new(2, 3))));
+	let player = tetrs::Player::new(tetrs::Piece::O, tetrs::Rot::Zero, tetrs::Point::new(2, 3));
+	black_box(well.test(player.sprite(), player.pt));
 	black_box(well.count_holes());
 	extern_tag("extern_tag2");
 }

@@ -38,7 +38,7 @@ mod scene;
 pub use self::scene::{Scene};
 
 mod state;
-pub use self::state::{State};
+pub use self::state::{State, test_player, trace_down};
 
 mod rules;
 pub use self::rules::{Rules, TheRules};

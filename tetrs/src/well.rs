@@ -5,18 +5,18 @@ Playing field.
 use ::std::{fmt};
 use ::std::str::{FromStr};
 
-use ::{Player, Point, Sprite};
+use ::{Point, Sprite};
 
 /// Maximum well height.
 ///
-/// If this is changed, don't forget to update the documentation for `Well::new`.
+// If this is changed, don't forget to update the documentation for `Well::new`.
 ///
 /// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
 pub const MAX_HEIGHT: usize = 23;
 
 /// Maxium well width.
 ///
-/// If this is changed, don't forget to update the documentation for `Well::new`.
+// If this is changed, don't forget to update the documentation for `Well::new`.
 ///
 /// Note that the `Line` type should be updated to be able to hold this number of bits (as a bit mask).
 pub const MAX_WIDTH: usize = 16;
@@ -45,7 +45,7 @@ impl Well {
 	///
 	/// # Panics
 	///
-	/// The width must be ∈ [4, 16] and the height must be ∈ [4, 22].
+	/// The width must be ∈ [4, 16] and the height must be ∈ [4, 23].
 	pub fn new(width: i8, height: i8) -> Well {
 		assert!(width >= 4 && width <= MAX_WIDTH as i8, "width must be ∈ [4, {}]", MAX_WIDTH);
 		assert!(height >= 4 && height <= MAX_HEIGHT as i8, "height must be ∈ [4, {}]", MAX_HEIGHT);
@@ -136,13 +136,6 @@ impl Well {
 		}
 		return false;
 	}
-	/// Hit tests the player against the field.
-	///
-	/// Returns `true` if the player is out of bounds left, right or below the well or if the piece overlaps with an occupied cell; `false` otheriwse.
-	pub fn test_player(&self, player: Player) -> bool {
-		let sprite = player.sprite();
-		self.test(sprite, player.pt)
-	}
 	#[inline]
 	pub fn wall_kick(&self, sprite: &Sprite, kicks: &[Point], pt: Point) -> Option<Point> {
 		kicks.iter()
@@ -174,11 +167,6 @@ impl Well {
 				self.field[row as usize] |= line_mask;
 			}
 		}
-	}
-	/// Etch the player into the field.
-	pub fn etch_player(&mut self, player: Player) {
-		let sprite = player.sprite();
-		self.etch(sprite, player.pt)
 	}
 	/// Gets a line with all columns set.
 	pub fn line_mask(&self) -> Line {
@@ -392,7 +380,7 @@ impl fmt::Display for Well {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use ::{Piece, Rot, Point};
+	use ::{Player, Piece, Rot, Point, test_player};
 
 	fn well() -> Well {
 		let mut well = Well::new(10, 4);
@@ -401,9 +389,9 @@ mod tests {
 		let p2 = Player::new(Piece::O, Rot::Zero, Point::new(-1, 2));
 		let p3 = Player::new(Piece::I, Rot::Right, Point::new(7, 3));
 
-		well.etch_player(p1);
-		well.etch_player(p2);
-		well.etch_player(p3);
+		well.etch(p1.sprite(), p1.pt);
+		well.etch(p2.sprite(), p2.pt);
+		well.etch(p3.sprite(), p3.pt);
 		println!("\n{}", well);
 
 		well
@@ -420,19 +408,19 @@ mod tests {
 	}
 
 	#[test]
-	fn test_player() {
+	fn test_player_test() {
 		let well = well();
 		// Within the field bounds
-		assert!(!well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
-		assert!(!well.test_player(Player::new(Piece::J, Rot::Left, Point::new(5, 2))));
+		assert!(!test_player(&well, Player::new(Piece::S, Rot::Zero, Point::new(-1, 3))));
+		assert!(!test_player(&well, Player::new(Piece::J, Rot::Left, Point::new(5, 2))));
 		// Clip left wall
-		assert!(well.test_player(Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
+		assert!(test_player(&well, Player::new(Piece::S, Rot::Zero, Point::new(-2, 3))));
 		// Clip with existing pieces
-		assert!(well.test_player(Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
+		assert!(test_player(&well, Player::new(Piece::I, Rot::Two, Point::new(2, 3))));
 		// Clip right wall
-		assert!(well.test_player(Player::new(Piece::O, Rot::Right, Point::new(9, 1))));
+		assert!(test_player(&well, Player::new(Piece::O, Rot::Right, Point::new(9, 1))));
 		// Clip the bottom
-		assert!(well.test_player(Player::new(Piece::J, Rot::Left, Point::new(5, 1))));
+		assert!(test_player(&well, Player::new(Piece::J, Rot::Left, Point::new(5, 1))));
 	}
 
 	#[test]

@@ -47,7 +47,7 @@ impl State {
 	pub fn move_left(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_left();
-		if !self.well.test_player(next) {
+		if !test_player(&self.well, next) {
 			self.player = Some(next);
 			true
 		}
@@ -61,7 +61,7 @@ impl State {
 	pub fn move_right(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_right();
-		if !self.well.test_player(next) {
+		if !test_player(&self.well, next) {
 			self.player = Some(next);
 			true
 		}
@@ -97,7 +97,7 @@ impl State {
 	pub fn soft_drop(&mut self) -> bool {
 		let player = match self.player { Some(pl) => pl, None => return false };
 		let next = player.move_down();
-		if !self.well.test_player(next) {
+		if !test_player(&self.well, next) {
 			self.player = Some(next);
 			true
 		}
@@ -112,7 +112,7 @@ impl State {
 	/// Returns `false` if no player.
 	pub fn hard_drop(&mut self) -> bool {
 		if let Some(player) = self.player {
-			self.player = Some(self.trace_down(player));
+			self.player = Some(trace_down(&self.well, player));
 			self.lock();
 			true
 		}
@@ -149,7 +149,7 @@ impl State {
 	/// Etch the player to the well and kill it.
 	pub fn lock(&mut self) {
 		if let Some(pl) = self.player {
-			self.well.etch_player(pl);
+			self.well.etch(pl.sprite(), pl.pt);
 			self.scene.draw(pl, TileTy::Field);
 			self.player = None;
 		}
@@ -168,7 +168,7 @@ impl State {
 				y: self.well.height() - (piece != Piece::O && piece != Piece::I) as i8,
 			},
 		});
-		self.well.test_player(self.player.unwrap())
+		test_player(&self.well, self.player.unwrap())
 	}
 	/// Tests if the well extends to the top 2 lines.
 	pub fn is_game_over(&self) -> bool {
@@ -180,7 +180,7 @@ impl State {
 		let mut scene = self.scene.clone();
 		if let Some(&player) = self.player() {
 			// Draw the ghost where the player will fall
-			let ghost = self.trace_down(player);
+			let ghost = trace_down(&self.well, player);
 			scene.draw(ghost, TileTy::Ghost);
 			// Draw the player
 			scene.draw(player, TileTy::Player);
@@ -189,10 +189,12 @@ impl State {
 	}
 }
 
-impl State {
-	fn trace_down(&self, player: Player) -> Player {
-		let sprite = player.sprite();
-		let pt = self.well.trace_down(sprite, player.pt);
-		Player::new(player.piece, player.rot, pt)
-	}
+pub fn test_player(well: &Well, player: Player) -> bool {
+	let sprite = player.sprite();
+	well.test(sprite, player.pt)
+}
+pub fn trace_down(well: &Well, player: Player) -> Player {
+	let sprite = player.sprite();
+	let pt = well.trace_down(sprite, player.pt);
+	Player::new(player.piece, player.rot, pt)
 }
