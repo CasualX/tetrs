@@ -7,26 +7,31 @@ use ::std::str::{FromStr};
 
 use ::{Point, Sprite};
 
+/// Row in the well.
+///
+/// The well represents its internal structure in bit masks.
+//
+// Keep in sync with `SIZE_OF_WIDTH` and `MAX_WIDTH`.
+pub type Line = u16;
+const SIZE_OF_WIDTH: usize = 16;
+
 /// Maximum well height.
 ///
+/// The well uses a fixed size array to store its field making it very cheap to copy.
+// This height was chosen to make the size of `Well` equal to 80 bytes, which is 5 times size of xmm register.
+//
 // If this is changed, don't forget to update the documentation for `Well::new`.
-///
-/// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
+//
+// Note that the absolute limit is about `123` (max value for `i8` - `4` for padding).
 pub const MAX_HEIGHT: usize = 23;
 
-/// Maxium well width.
+/// Maximum well width.
 ///
 // If this is changed, don't forget to update the documentation for `Well::new`.
-///
-/// Note that the `Line` type should be updated to be able to hold this number of bits (as a bit mask).
-pub const MAX_WIDTH: usize = 16;
-
-/// A line is represented by a bit mask in 'reversed' order.
-///
-/// The block with position `x` is represented by the bit `1 << x` (this is mirrored from its binary form when printed).
-///
-/// TODO! This mirroring causes a lot of conceptual problems, consider changing it.
-pub type Line = u16;
+//
+// This should be equal to `size_of(Line) - 4`.
+// Subtract 4 is needed to avoid handling some sprite test edge cases (sprites are 4x4).
+pub const MAX_WIDTH: usize = 12;
 
 /// Playing field.
 ///
@@ -45,7 +50,7 @@ impl Well {
 	///
 	/// # Panics
 	///
-	/// The width must be ∈ [4, 16] and the height must be ∈ [4, 23].
+	/// The width must be ∈ [4, 12] and the height must be ∈ [4, 23].
 	pub fn new(width: i8, height: i8) -> Well {
 		assert!(width >= 4 && width <= MAX_WIDTH as i8, "width must be ∈ [4, {}]", MAX_WIDTH);
 		assert!(height >= 4 && height <= MAX_HEIGHT as i8, "height must be ∈ [4, {}]", MAX_HEIGHT);
@@ -57,22 +62,16 @@ impl Well {
 	}
 	/// Creates a new well with the given data.
 	///
-	/// Note that the input lines are in 'visual' order, they will be vertically flipped and horizontally mirrored for internal storage.
+	/// Note that the input lines are in 'visual' order. Internally the lines are stored bottom line first.
 	///
 	/// # Panics
 	///
 	/// No minos may be found outside the well's width.
 	pub fn from_data(width: i8, lines: &[Line]) -> Well {
 		let mut well = Well::new(width, lines.len() as i8);
+		let shift = SIZE_OF_WIDTH as usize - width as usize;
 		for (lhs, &rhs) in Iterator::zip(well.field[..lines.len()].iter_mut(), lines.iter().rev()) {
-			let mut rhs = rhs;
-			let mut line = 0;
-			for _ in 0..width {
-				line = (line << 1) | (rhs & 1);
-				rhs >>= 1;
-			}
-			assert_eq!(0, rhs, "found minos outside the well's width");
-			*lhs = line;
+			*lhs = rhs << shift;
 		}
 		well
 	}
@@ -90,47 +89,49 @@ impl Well {
 	pub fn lines(&self) -> &[Line] {
 		&self.field[..self.height as usize]
 	}
+	pub fn col_range(&self) -> ColRange {
+		ColRange {
+			start: 1 << (SIZE_OF_WIDTH - 1),
+			end: 1 << (SIZE_OF_WIDTH - self.width() as usize - 1),
+		}
+	}
+	fn render(sprite: &Sprite, x: i8) -> [Line; 4] {
+		let mut result = [0; 4];
+		for y in 0..4 {
+			result[y] = (sprite.pix[y] as Line).rotate_right((x + 4) as u32);
+		}
+		result
+	}
 	/// Tests if the sprite collides with with the well.
 	pub fn test(&self, sprite: &Sprite, pt: Point) -> bool {
 		// Early reject out of bounds
-		if pt.x < (0 - 4) || pt.x >= self.width || pt.y < 0 {
+		if pt.x <= -4 || pt.x >= self.width || pt.y < 0 {
 			return true;
 		}
 		if pt.y >= self.height + 4 {
 			return false;
 		}
 
-		// For clipping left/right walls
-		let line_mask = if pt.x < 0 {
-			self.line_mask() << (-pt.x) as usize
-		}
-		else {
-			self.line_mask() >> pt.x as usize
-		};
+		// Render the sprite
+		let sprite = Self::render(sprite, pt.x);
+		let line_mask = self.line_mask();
 
-		// The compiler actually unrolls and splits this loop, pretty slick :)
 		for y in 0..4 {
 			// Check if part is sticking out of a wall
-			if (sprite.pix[y as usize] as Line) & !line_mask != 0 {
+			if sprite[y as usize] & !line_mask != 0 {
 				return true;
 			}
 			let row = pt.y - y;
 			// If this row is below the floor
 			if row < 0 {
-				if sprite.pix[y as usize] != 0 {
+				if sprite[y as usize] != 0 {
 					return true;
 				}
 			}
 			// If this row is below the ceiling
 			else if row < self.height {
 				// Render the sprite for this line
-				let cg_line = if pt.x < 0 {
-					(sprite.pix[y as usize] as Line) >> (-pt.x) as usize
-				}
-				else {
-					(sprite.pix[y as usize] as Line) << pt.x as usize
-				};
-				if cg_line & self.field[row as usize] != 0 {
+				if sprite[y as usize] & self.field[row as usize] != 0 {
 					return true;
 				}
 			}
@@ -158,25 +159,20 @@ impl Well {
 	}
 	/// Etches the sprite into the well.
 	pub fn etch(&mut self, sprite: &Sprite, pt: Point) {
+		let sprite = Self::render(sprite, pt.x);
 		// Etch the sprite into the field
 		for y in 0..4 {
 			// Clip the affected row to the field
 			let row = pt.y - y;
 			if row >= 0 && row < self.height {
-				// Render the sprite for this line
-				let line_mask = if pt.x < 0 {
-					(sprite.pix[y as usize] as Line) >> (-pt.x) as usize
-				}
-				else {
-					(sprite.pix[y as usize] as Line) << pt.x as usize
-				};
-				self.field[row as usize] |= line_mask;
+				self.field[row as usize] |= sprite[y as usize];
 			}
 		}
 	}
 	/// Gets a line with all columns set.
 	pub fn line_mask(&self) -> Line {
-		(1 << self.width() as usize) - 1
+		let shift = SIZE_OF_WIDTH - self.width() as usize;
+		!((1 << shift) - 1)
 	}
 	/// Gets a line.
 	pub fn line(&self, row: i8) -> Line {
@@ -231,56 +227,52 @@ impl Well {
 	}
 	/// Flood fills the field from the given seeding point.
 	pub fn flood_fill(&mut self, seed: Point) {
-		self._flood_fill(seed.y as usize, 1 << seed.x as usize);
+		let x = self.col_range().nth(seed.x as usize).unwrap();
+		self._flood_fill(seed.y as usize, x);
 	}
 	fn _flood_fill(&mut self, y: usize, x: Line) {
 		// Bounds check it early (optimizer is dumb...)
 		//let _ = self.lines()[y];
-		// WARNING! UB if `width >= sizeof(Line) * 8`...
-		let end = (1u32 << self.width as usize) as Line;
+		let mut range = self.col_range();
 		// Since the top of the well is most likely open, optimize for this case
-		let (left, right) = if self.field[y] == 0 {
-			(1, end)
-		}
-		else {
+		if self.field[y] != 0 {
 			// Find the left edge
 			let mut left = x;
-			while left > 1 && self.field[y] & (left >> 1) == 0 {
-				left >>= 1;
+			while left < range.start && self.field[y] & (left << 1) == 0 {
+				left <<= 1;
 			}
 			// Find the right edge (+ 1)
 			let mut right = x;
-			while right < end && self.field[y] & right == 0 {
-				right <<= 1;
+			while right > range.end && self.field[y] & right == 0 {
+				right >>= 1;
 			}
-			(left, right)
-		};
+			range = ColRange {
+				start: left,
+				end: right,
+			};
+		}
 		// Mask all the blocks between left and right
-		let mask = right - left;
+		let mask = range.mask();
 		self.field[y] |= mask;
 
 		// Let's do some tail call optimization first
 		if y >= 1 {
 			if self.field[y - 1] & mask == 0 {
-				return self._flood_fill(y - 1, left);
+				return self._flood_fill(y - 1, range.start);
 			}
 			// Recursively flood the rest
-			let mut it = left;
-			while it < right {
+			for it in range.clone() {
 				if self.field[y - 1] & it == 0 {
 					self._flood_fill(y - 1, it);
 				}
-				it <<= 1;
 			}
 		}
 		// Since we're flooding top to bottom first, this case is considerably more rare
 		if y + 1 < self.height as usize && self.field[y + 1] & mask != mask {
-			let mut it = left;
-			while it < right {
+			for it in range.clone() {
 				if self.field[y + 1] & it == 0 {
 					self._flood_fill(y + 1, it);
 				}
-				it <<= 1;
 			}
 		}
 	}
@@ -362,11 +354,9 @@ impl fmt::Display for Well {
 		// let mut bg = " ";
 		for &row in self.field[0..self.height() as usize].iter().rev() {
 			f.write_str("|")?;
-			let mut mask = 0x1;
-			for _ in 0..self.width() {
-				let graphic = if (row & mask) != 0 { MINOS_STR } else { " " };
+			for col_mask in self.col_range() {
+				let graphic = if (row & col_mask) != 0 { MINOS_STR } else { " " };
 				f.write_str(graphic)?;
-				mask <<= 1;
 			}
 			f.write_str("|\n")?;
 			// if bg == " " {
@@ -386,36 +376,136 @@ impl fmt::Display for Well {
 
 //----------------------------------------------------------------
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ColRange {
+	pub start: Line,
+	pub end: Line,
+}
+impl ColRange {
+	/// Creates a mask with all bits set in the range.
+	pub fn mask(&self) -> Line {
+		(self.start - self.end) << 1
+	}
+}
+impl Iterator for ColRange {
+	type Item = Line;
+	fn next(&mut self) -> Option<Line> {
+		if self.start != self.end {
+			let it = self.start;
+			self.start >>= 1;
+			Some(it)
+		}
+		else {
+			None
+		}
+	}
+}
+impl DoubleEndedIterator for ColRange {
+	fn next_back(&mut self) -> Option<Line> {
+		if self.start != self.end {
+			self.end <<= 1;
+			Some(self.end)
+		}
+		else {
+			None
+		}
+	}
+}
+
+//----------------------------------------------------------------
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use ::{Player, Piece, Rot, Point, test_player};
 
-	fn well() -> Well {
-		let mut well = Well::new(10, 4);
+	#[test]
+	fn static_assert() {
+		// These shouldn't need to be tests but for the lack of const fn.
+		let size_of_line = ::std::mem::size_of::<Line>() * 8;
+		assert_eq!(size_of_line, super::SIZE_OF_WIDTH);
+		assert_eq!(size_of_line, MAX_WIDTH + 4);
+		assert!(MAX_HEIGHT < 123);
+	}
 
-		let p1 = Player::new(Piece::L, Rot::Zero, Point::new(2, 1));
-		let p2 = Player::new(Piece::O, Rot::Zero, Point::new(-1, 2));
-		let p3 = Player::new(Piece::I, Rot::Right, Point::new(7, 3));
+	#[test]
+	fn render() {
+		let sprite = Sprite { pix: [ 0b1000, 0b0111, 0b1110, 0b0001 ] };
+		let rendered = Well::render(&sprite, 1);
+		assert_eq!(rendered, [
+			0b1000 << 11,
+			0b0111 << 11,
+			0b1110 << 11,
+			0b0001 << 11,
+		]);
+	}
 
-		well.etch(p1.sprite(), p1.pt);
-		well.etch(p2.sprite(), p2.pt);
-		well.etch(p3.sprite(), p3.pt);
-		println!("\n{}", well);
+	#[test]
+	fn col_range() {
+		let well = Well::new(4, 4);
+		let mut range = well.col_range();
 
-		well
+		assert_eq!(     0b1111 << 12 , range.mask());
+
+		assert_eq!(Some(0b1000 << 12), range.next());
+		assert_eq!(     0b0111 << 12 , range.mask());
+
+		assert_eq!(Some(0b0100 << 12), range.next());
+		assert_eq!(     0b0011 << 12 , range.mask());
+
+		assert_eq!(Some(0b0001 << 12), range.next_back());
+		assert_eq!(     0b0010 << 12 , range.mask());
+
+		assert_eq!(Some(0b0010 << 12), range.next());
+
+		assert_eq!(None, range.next());
+		assert_eq!(None, range.next_back());
 	}
 
 	#[test]
 	fn etch() {
-		let well = well();
-		assert_eq!("|         □|\n\
-		            |         □|\n\
-		            |□□   □   □|\n\
-		            |□□ □□□   □|\n\
-		            +----------+", format!("{}", well));
+		#![allow(non_snake_case)]
+		let mut well = Well::new(10, 4);
+		let sprite_O = Sprite { pix: [ 0b0000, 0b0110, 0b0110, 0b0110 ] };
+		let sprite_L = Sprite { pix: [ 0b0001, 0b0111, 0b0000, 0b0000 ] };
+		let sprite_I = Sprite { pix: [ 0b0010, 0b0010, 0b0010, 0b0010 ] };
+		well.etch(&sprite_O, Point::new(-1, 2));
+		well.etch(&sprite_L, Point::new(2, 1));
+		well.etch(&sprite_I, Point::new(7, 3));
+
+		let result = Well::from_data(10, &[
+			0b0000000001,
+			0b0000000001,
+			0b1100010001,
+			0b1101110001,
+		]);
+		println!("\n{}", well);
+		assert_eq!(result, well);
 	}
 
+	#[test]
+	fn flood_fill() {
+		let mut well = Well::from_data(10, &[
+			0b0000000011,
+			0b0000011011,
+			0b0001100100,
+			0b1000000100,
+			0b0100101000,
+			0b0011010000,
+		]);
+		println!("\n{}", well);
+		well.flood_fill(Point::new(5, 5));
+		println!("{}", well);
+		let result = Well::from_data(10, &[
+			0b1111111111,
+			0b1111111111,
+			0b1111111100,
+			0b1111111100,
+			0b0111111000,
+			0b0011010000,
+		]);
+		assert_eq!(result, well);
+	}
+/*
 	#[test]
 	fn test_player_test() {
 		let well = well();
@@ -481,28 +571,5 @@ mod tests {
 		            |□□□□     □|\n\
 		            +----------+", format!("{}", well));
 	}
-
-	#[test]
-	fn flood_fill() {
-		let mut well = Well::from_data(10, &[
-			0b0000000011,
-			0b0000011011,
-			0b0001100100,
-			0b1000000100,
-			0b0100101000,
-			0b0011010000,
-		]);
-		println!("\n{}", well);
-		well.flood_fill(Point::new(5, 5));
-		println!("{}", well);
-		let result = Well::from_data(10, &[
-			0b1111111111,
-			0b1111111111,
-			0b1111111100,
-			0b1111111100,
-			0b0111111000,
-			0b0011010000,
-		]);
-		assert_eq!(result, well);
-	}
+*/
 }

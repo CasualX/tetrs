@@ -106,9 +106,8 @@ impl Weights {
 			}
 			else {
 				height += 1;
-				let mut line = line;
-				for col in 0..width {
-					if line & 1 != 0 {
+				for (col, col_mask) in well.col_range().enumerate() {
+					if line & col_mask != 0 {
 						// Sum the holes for this column
 						holes[col] += height - heights[col] - 1;
 						// Save the height for this column
@@ -116,7 +115,6 @@ impl Weights {
 						// Save the stacks for this column
 						stacks[col] += (holes[col] != 0) as i32;
 					}
-					line >>= 1;
 				}
 			}
 		}
