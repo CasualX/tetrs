@@ -139,21 +139,22 @@ impl State {
 	/// Check for line clears.
 	///
 	/// The callback is called for every cleared line with the row being cleared from bottom to top.
-	pub fn clear_lines<F>(&mut self, mut f: F) where F: FnMut(i8) {
-		let mut lines_cleared = 0;
+	pub fn clear_lines<F>(&mut self, mut f: F) -> i32 where F: FnMut(i32) {
+		let mut cleared = 0;
 		let line_mask = self.well.line_mask();
 		let mut row = 0;
 		while row < self.well.height() {
 			if self.well.line(row) == line_mask {
-				f(row + lines_cleared);
+				f(row as i32 + cleared);
 				self.well.remove_line(row);
 				self.scene.remove_line(row);
-				lines_cleared += 1;
+				cleared += 1;
 			}
 			else {
 				row += 1;
 			}
 		}
+		cleared
 	}
 	/// Etch the player to the well and kill it.
 	pub fn lock(&mut self) {

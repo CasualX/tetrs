@@ -29,28 +29,37 @@ pub struct Weights {
 /// Gently appropriated from https://codemyroad.wordpress.com/2013/04/14/tetris-ai-the-near-perfect-player/
 impl Default for Weights {
 	fn default() -> Weights {
+		// Weights {
+		// 	agg_height_f: -0.510066,
+		// 	max_height_f: -0.510066,
+		// 	complete_lines_f: 0.760666,
+		// 	holes_f: -0.35663,
+		// 	caves_f: 0.0,
+		// 	bumpiness_f: -0.184483,
+		// 	stacking_f: -0.5,
+		// }
+Weights {
+    agg_height_f: -0.2803344111164008,
+    max_height_f: 0.02526504071606306,
+    complete_lines_f: 0.20605120395222354,
+    holes_f: -0.18751829871729053,
+    caves_f: -0.3557762709568737,
+    bumpiness_f: -0.12041213579170762,
+    stacking_f: -0.06944294190822053
+}
+	}
+}
+impl ::rand::Rand for Weights {
+	fn rand<R: ::rand::Rng>(rng: &mut R) -> Weights {
 		Weights {
-			agg_height_f: -0.510066,
-			max_height_f: -0.510066,
-			complete_lines_f: 0.760666,
-			holes_f: -0.35663,
-			caves_f: 0.0,
-			bumpiness_f: -0.184483,
-			stacking_f: -0.5,
-
-			// heights: -0.03,
-			// lines: 8.0,
-			// holes: -7.5,
-			// bumpiness: -3.5,
-			// walltouch: 6.52,
-
-			// heights: -3.78,
-			// lines: 1.6,
-			// holes: -2.31,
-			// bumpiness: -0.184483,
-			// walltouch: 6.52,
+			agg_height_f: rng.gen::<f64>() - 0.5,
+			max_height_f: rng.gen::<f64>() - 0.5,
+			complete_lines_f: rng.gen::<f64>() - 0.5,
+			holes_f: rng.gen::<f64>() - 0.5,
+			caves_f: rng.gen::<f64>() - 0.5,
+			bumpiness_f: rng.gen::<f64>() - 0.5,
+			stacking_f: rng.gen::<f64>() - 0.5,
 		}
-
 	}
 }
 impl Weights {
@@ -141,6 +150,7 @@ pub enum Play {
 pub struct PlayI {
 	pub score: f64,
 	pub play: Vec<Play>,
+	pub player: Option<Player>,
 }
 
 impl PlayI {
@@ -168,6 +178,7 @@ impl PlayI {
 		let mut best = PlayI {
 			score: f64::NEG_INFINITY,
 			play: Vec::new(),
+			player: None,
 		};
 		// While we have unexplored game states
 		while let Some(&(play, player)) = path.last() {
@@ -187,6 +198,7 @@ impl PlayI {
 								best.score = score;
 								best.play.clear();
 								best.play.extend(path.iter().map(|&(play, _)| play));
+								best.player = Some(player);
 							}
 						}
 					}

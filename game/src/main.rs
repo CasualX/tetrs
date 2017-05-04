@@ -132,7 +132,7 @@ fn main() {
 
 	// Tetris game state
 	let mut state = tetrs::State::new(10, 22);
-	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new() };
+	let mut play = tetrs::PlayI { score: 0.0, play: Vec::new(), player: None };
 	let mut play_i = 0;
 	let mut bag = tetrs::OfficialBag::default();
 
@@ -200,6 +200,6 @@ fn main() {
 
 		renderer.present();
 
-		thread::sleep(Duration::from_millis(20));
+		thread::sleep(Duration::from_millis(1));
     }
 }
